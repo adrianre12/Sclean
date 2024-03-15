@@ -10,7 +10,7 @@ namespace Sclean
 {
     public class ScleanPlugin : TorchPluginBase, IWpfPlugin
     {
-        public ScleanConfig Config => _config?.Data;
+        public ScleanConfig Config { get; private set; }
         public static Logger Log = LogManager.GetLogger("sclean");
         private Persistent<ScleanConfig> _config = null!;
 
