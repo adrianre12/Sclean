@@ -27,14 +27,15 @@ namespace Sclean
         public static List<MyCubeBlock> GetScrapBeacons(this IMyCubeGrid grid)
         {
             List<MyCubeBlock> beacons = new List<MyCubeBlock> ();
+            //ScleanPlugin.Log.Info($"GetScrapBeacons grid name>{grid.DisplayName}");
 
             foreach (var block in ((MyCubeGrid)grid).GetFatBlocks())
             {
-               // ScleanPlugin.Log.Info($"TypeId: {block.BlockDefinition.Id.TypeId.ToString()}");
+               //ScleanPlugin.Log.Info($"grid name>{grid.DisplayName} TypeId: {block.BlockDefinition.Id.TypeId.ToString()}");
                
-                if (block.BlockDefinition.Id.SubtypeId.ToString().EndsWith("ScrapBeacon"))
+                if (block.BlockDefinition.Id.SubtypeId.ToString().EndsWith("Beacon"))
                 {
-                    ScleanPlugin.Log.Info($"SubtypeId: {block.BlockDefinition.Id.SubtypeId.ToString()}");
+                    ScleanPlugin.Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId.ToString()}");
                     beacons.Add(block); 
                 }
 
@@ -45,5 +46,6 @@ namespace Sclean
             return beacons;
 
         }
+
     }
 }
