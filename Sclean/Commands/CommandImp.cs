@@ -139,7 +139,7 @@ namespace Sclean.Commands
                         {
                             beaconPositions.AddRange(gridInfo.BeaconPositions);
                         }
-                        use = false; // dont store this group if it has a scrap beacon except for fullList=true
+                        use = false; // Not really needed as it would be filtered later by the beacon zone but it is an optimisation.
                     }
                     
                     // player grid and has power

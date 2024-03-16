@@ -21,6 +21,7 @@ namespace Sclean.Commands
         {
             var sb = new StringBuilder();
             sb.AppendLine("Information");
+            sb.AppendLine($"Beacon SubtypeId ends with: {ScleanPlugin.Instance.Config.BeaconSubtype}");
             sb.AppendLine("Ranges");
             sb.AppendLine($"  Player: {ScleanPlugin.Instance.Config.PlayerRange}");
             sb.AppendLine($"  Scrap Beacon: {ScleanPlugin.Instance.Config.ScrapBeaconRange}");
