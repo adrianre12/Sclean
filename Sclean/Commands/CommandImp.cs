@@ -92,6 +92,7 @@ namespace Sclean.Commands
 
         public struct GridData
         {
+            public List<List<MyCubeGrid>> GridGroups;
             public List<MyCubeGrid> Grids;
             public List<Vector3D> BeaconPositions;
             public List<Vector3D> PlayerPositions;
@@ -105,13 +106,15 @@ namespace Sclean.Commands
         public static GridData GetGridData(bool fullList)
         {
             var gridData = new GridData();
+            var gridGroups = new List<List<MyCubeGrid>>();
             var gridList = new List<MyCubeGrid>();
             var beaconPositions = new List<Vector3D>();
 
+            ScleanPlugin.Log.Info($"Number of groups {MyCubeGridGroups.Static.Logical.Groups.Count}");
             Parallel.ForEach(MyCubeGridGroups.Static.Logical.Groups, (group) =>
             {
-                //ScleanPlugin.Log.Info($"Starting group, nodes count {group.Nodes.Count()}");
                 //Due to the locking do two stages, first does all the filtering and takes a long time. Second is a quick add to results.
+                ScleanPlugin.Log.Info($"Number of Nodes in group {group.Nodes.Count}");
                 bool store = true;
                 foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
@@ -128,17 +131,19 @@ namespace Sclean.Commands
                         {
                             beaconPositions.AddRange(gridInfo.BeaconPositions);
                         }
-                        store = fullList; // dont store this grid if it has a scrap beacon except for fullList=true
+                        // an optimisation 
+                        //store = fullList; // dont store this grid if it has a scrap beacon except for fullList=true
                     }
                     
-                    // player grid and has power
+                /*    // player grid and has power
                     if (gridInfo.Owner == OwnerType.Player && gridInfo.IsPowered)
                     {
                         store = fullList;
-                    }
+                    }*/
                 }
 
                 if (store)
+                {
                     lock (gridList)
                     {
                         foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
@@ -147,12 +152,24 @@ namespace Sclean.Commands
                             gridList.Add(node.NodeData);
                         }
                     }
+                    lock (gridGroups)
+                    {
+                        List<MyCubeGrid> gridGroup = new List<MyCubeGrid>();
+                        foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
+                        {
+                            gridGroup.Add(node.NodeData);
+                        }
+                        gridGroups.Add(gridGroup);
+                        ScleanPlugin.Log.Info($"GridGroups Added group size {gridGroup.Count}");
+                    }
+                }
 
             });
 
+            gridData.GridGroups = gridGroups;
             gridData.Grids = gridList;
             gridData.BeaconPositions = beaconPositions;
-
+            ScleanPlugin.Log.Info($"GridGroups count {gridGroups.Count}");
             return gridData;
         }
 
