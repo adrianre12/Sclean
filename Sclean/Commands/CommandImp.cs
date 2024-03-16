@@ -54,8 +54,6 @@ namespace Sclean.Commands
                     filteredGridData.BeaconPositions.Add(beaconPosition);
                 }
             }
-            Log.Info($"player positions {filteredGridData.PlayerPositions.Count}");
-            Log.Info($"beacon positions {filteredGridData.BeaconPositions.Count}");
 
             // filter by distance from player and beacon. Non player grids also have to be protected.
             bool useGroup;
@@ -124,18 +122,15 @@ namespace Sclean.Commands
             var gridGroups = new List<List<MyCubeGrid>>();
             var beaconPositions = new List<Vector3D>();
 
-            //Log.Info($"Number of groups {MyCubeGridGroups.Static.Logical.Groups.Count}");
             Parallel.ForEach(MyCubeGridGroups.Static.Logical.Groups, (group) =>
             {
                 //Due to the locking do two stages, first does all the filtering and takes a long time. Second is a quick add to results.
-                //Log.Info($"Number of Nodes in group {group.Nodes.Count}");
                 int c = 0;
                 bool use = true;
                 foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
                     MyCubeGrid grid = node.NodeData;
                     var gridInfo = GetGridInfo(grid);
-                    Log.Info($"Grid: {node.NodeData.DisplayName} #Beacons: {gridInfo.BeaconPositions.Count} Owner: {gridInfo.Owner} IsPowered: {gridInfo.IsPowered}");
 
                     // has player beacon
                     if (gridInfo.BeaconPositions.Count > 0 && gridInfo.Owner == OwnerType.Player)
@@ -152,8 +147,7 @@ namespace Sclean.Commands
                     {
                         use = false;
                     }
-                    //Log.Info($"Grid: {node.NodeData.DisplayName} Store: {store}");
-
+                    //Log.Info($"Grid: {node.NodeData.DisplayName} use: {use} #Beacons: {gridInfo.BeaconPositions.Count} Owner: {gridInfo.Owner} IsPowered: {gridInfo.IsPowered}");
                 }
 
                 if (!filter || use)

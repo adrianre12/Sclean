@@ -15,16 +15,6 @@ namespace Sclean.Commands
     {
         private static readonly Logger Log = LogManager.GetLogger("Sclean");
 
-       /* [Command("test", "Dev test")]
-        [Permission(MyPromoteLevel.None)]
-        public void Test()
-        {
-            Log.Info("test command");
-            Context.Respond("Testing");
-            var gridData = CommandImp.GetGridData(true);
-            Context.Respond($"Found grids {gridData.CountGrids()} beacons {gridData.BeaconPositions.Count()}" );
-        }*/
-
         [Command("info", "Information about the plugin")]
         [Permission(MyPromoteLevel.None)]
         public void Info()
@@ -130,7 +120,7 @@ namespace Sclean.Commands
             }
             else
             {
-                var m = new DialogMessage("Cleanup", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching", sb.ToString());
+                var m = new DialogMessage("Sclean", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching", sb.ToString());
                 ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
             }
         }
