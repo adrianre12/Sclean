@@ -15,7 +15,7 @@ namespace Sclean.Commands
     {
         private static readonly Logger Log = LogManager.GetLogger("Sclean");
 
-        [Command("test", "Dev test")]
+       /* [Command("test", "Dev test")]
         [Permission(MyPromoteLevel.None)]
         public void Test()
         {
@@ -23,7 +23,7 @@ namespace Sclean.Commands
             Context.Respond("Testing");
             var gridData = CommandImp.GetGridData(true);
             Context.Respond($"Found grids {gridData.CountGrids()} beacons {gridData.BeaconPositions.Count()}" );
-        }
+        }*/
 
         [Command("info", "Information about the plugin")]
         [Permission(MyPromoteLevel.None)]
@@ -42,7 +42,7 @@ namespace Sclean.Commands
         public void Delete()
         {
             Log.Info("delete command");
-            CommandImp.GridData gridData = CommandImp.FilteredGridData();
+            CommandImp.GridData gridData = CommandImp.FilteredGridData(true);
 
             var c = 0;
             foreach ( var gridGroup in gridData.GridGroups ) {
@@ -55,6 +55,7 @@ namespace Sclean.Commands
                     var blocks = grid.GetFatBlocks<MyCockpit>();
                     foreach (var cockpit in blocks)
                     {
+                        Log.Info($"Ejecting Pilot from {grid.EntityId}: {grid.DisplayName}");
                         cockpit.RemovePilot();
                     }
 
@@ -75,7 +76,7 @@ namespace Sclean.Commands
             {
                 case 0:
                     {
-                        gridData = CommandImp.FilteredGridData();
+                        gridData = CommandImp.FilteredGridData(true);
                         RespondGridData(gridData);
                         break;
                     }
@@ -85,7 +86,7 @@ namespace Sclean.Commands
                         {
                             case "all":
                                 {
-                                    gridData = CommandImp.GetGridData(true);
+                                    gridData = CommandImp.FilteredGridData(false);
                                     RespondGridData(gridData);
                                     break;
                                 }
@@ -110,6 +111,7 @@ namespace Sclean.Commands
             Context.Respond("Listing");
 
             StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Active Safe Zones: Player={gridData.PlayerPositions.Count} Beacon={gridData.BeaconPositions.Count}");
             int c = 0;
             foreach (var gridGroup in gridData.GridGroups)
             {
