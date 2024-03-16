@@ -5,7 +5,7 @@ namespace Sclean
 {
     public class ScleanConfig : ViewModel
     {
-        private int _playerRange = 250;
+        private int _playerRange = 10000;
         [Display(Name = "Player", GroupName = "Protection Range", Description = "Radius of the protection AOE")]
         public int PlayerRange { get => _playerRange; set => SetValue(ref _playerRange, value); }
 

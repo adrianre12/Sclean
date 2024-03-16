@@ -4,20 +4,25 @@ using Torch.Commands.Permissions;
 using Torch.Mod.Messages;
 using Torch.Mod;
 using VRage.Game.ModAPI;
+using System.Collections;
+using NLog;
+using Sandbox.Game.Entities;
 
 namespace Sclean.Commands
 {
     [Category("sclean")]
     public class ScleanModule : CommandModule
     {
+        private static readonly Logger Log = LogManager.GetLogger("Sclean");
+
         [Command("test", "Dev test")]
         [Permission(MyPromoteLevel.None)]
         public void Test()
         {
-            ScleanPlugin.Log.Info("test command");
+            Log.Info("test command");
             Context.Respond("Testing");
             var gridData = CommandImp.GetGridData(true);
-            Context.Respond($"Found grids {gridData.Grids.Count().ToString()} beacons {gridData.BeaconPositions.Count()}" );
+            Context.Respond($"Found grids {gridData.CountGrids()} beacons {gridData.BeaconPositions.Count()}" );
         }
 
         [Command("info", "Information about the plugin")]
@@ -33,22 +38,97 @@ namespace Sclean.Commands
             Context.Respond(sb.ToString());
         }
 
+        [Command("delete", "Delete all grids using the ScrapYard rules")]
+        public void Delete()
+        {
+            Log.Info("delete command");
+            CommandImp.GridData gridData = CommandImp.FilteredGridData();
+
+            var c = 0;
+            foreach ( var gridGroup in gridData.GridGroups ) {
+                foreach (var grid in gridGroup)
+                {
+                    c++;
+                    Log.Info($"Deleting grid: {grid.EntityId}: {grid.DisplayName}");
+                    
+                    //Eject Pilot
+                    var blocks = grid.GetFatBlocks<MyCockpit>();
+                    foreach (var cockpit in blocks)
+                    {
+                        cockpit.RemovePilot();
+                    }
+
+                    grid.Close();
+                }
+            }
+            Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
+            Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
+
+        }
+
         [Command("list", "List potental removals")]
         [Permission(MyPromoteLevel.None)]
-        public void ListRemovals()
+        public void List() {
+            Log.Info("list command");
+            CommandImp.GridData gridData;
+            switch (Context.Args.Count())
+            {
+                case 0:
+                    {
+                        gridData = CommandImp.FilteredGridData();
+                        RespondGridData(gridData);
+                        break;
+                    }
+
+                case 1:{
+                        switch (Context.Args[0].ToLower())
+                        {
+                            case "all":
+                                {
+                                    gridData = CommandImp.GetGridData(true);
+                                    RespondGridData(gridData);
+                                    break;
+                                }
+                            default:
+                                {
+                                    Context.Respond("Unknown argument");
+                                    break;
+                                }
+                        }
+                    break;
+                    }
+
+                default:
+                    {
+                        Context.Respond("Wrong number of arguments");
+                        break;
+                    }
+            }
+        }
+        private void RespondGridData(CommandImp.GridData gridData)
         {
-            ScleanPlugin.Log.Info("list command");
             Context.Respond("Listing");
-            var gridData = CommandImp.GetGridData(false);
+
+            StringBuilder sb = new StringBuilder();
+            int c = 0;
+            foreach (var gridGroup in gridData.GridGroups)
+            {
+                sb.AppendLine("---");
+                foreach(var grid in gridGroup)
+                {
+                    c++;
+                    sb.AppendLine($"  {grid.DisplayName} ({grid.BlocksCount} block(s))");
+                }
+            }
             
             if (Context.SentBySelf)
             {
-                Context.Respond(String.Join("\n", gridData.Grids.Select((g, i) => $"{i + 1}. {gridData.Grids[i].DisplayName} ({gridData.Grids[i].BlocksCount} block(s))")));
-                Context.Respond($"Found {gridData.Grids.Count} grids matching the given conditions.");
+                Context.Respond(sb.ToString());
+                Context.Respond($"Found {gridData.GridGroups.Count()} groups, total {c} grids matching the given conditions.");
             }
             else
             {
-                var m = new DialogMessage("Cleanup", null, $"Found {gridData.Grids.Count} matching", String.Join("\n", gridData.Grids.Select((g, i) => $"{i + 1}. {gridData.Grids[i].DisplayName} ({gridData.Grids[i].BlocksCount} block(s))")));
+                var m = new DialogMessage("Cleanup", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching", sb.ToString());
                 ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
             }
         }

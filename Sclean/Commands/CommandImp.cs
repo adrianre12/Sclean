@@ -1,4 +1,5 @@
-﻿using Sandbox.Game;
+﻿using NLog;
+using Sandbox.Game;
 using Sandbox.Game.Entities;
 using Sandbox.Game.EntityComponents;
 using Sandbox.Game.World;
@@ -16,11 +17,13 @@ namespace Sclean.Commands
 {
     public static class CommandImp
     {
+        private static readonly Logger Log = LogManager.GetLogger("Sclean");
+
         /// <summary>
         /// Performs the distance filter on gridData
         /// </summary>
         /// <returns></returns>
-       public static GridData DistanceFilterGridData(GridData gridData)
+        public static GridData FilteredGridData()
         {
             int playerRange = ScleanPlugin.Instance.Config.PlayerRange;
             int playerRangeSqr = playerRange * playerRange;
@@ -29,9 +32,11 @@ namespace Sclean.Commands
             int maxPlayerBeaconOffset = playerRange - beaconRange;
             int maxPlayerBeaconOffsetSqr = maxPlayerBeaconOffset * maxPlayerBeaconOffset;
 
+            // Grid specific filtering is done in GetGridData
+            GridData gridData = GetGridData(true);
             GridData filteredGridData = new GridData
             {
-                Grids = new List<MyCubeGrid>(),
+                GridGroups = new List<List<MyCubeGrid>>(),
                 BeaconPositions = new List<Vector3D>(),
                 PlayerPositions = new List<Vector3D>(),
             };
@@ -59,47 +64,64 @@ namespace Sclean.Commands
                 }
             }
 
-            // filter
-            bool useGrid;
-            foreach(var grid in gridData.Grids)
+            // filter by distance from player and beacon. Non player grids also have to be protected.
+            bool useGroup;
+            foreach (var gridGroup in gridData.GridGroups)
             {
-                useGrid = true;
-                foreach(var playerPosition in filteredGridData.PlayerPositions)
+                useGroup = true;
+                foreach (var grid in gridGroup)
                 {
-                    if(Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), playerPosition) < playerRangeSqr)
+                    foreach (var playerPosition in filteredGridData.PlayerPositions)
                     {
-                        useGrid = false;
+                        if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), playerPosition) < playerRangeSqr)
+                        {
+                            useGroup = false;
+                            break;
+                        }
                     }
-                }
-                if (useGrid) // no point checking beacons if the grid is already in a protected area.
-                {
+
                     foreach (var beaconPosition in filteredGridData.BeaconPositions)
                     {
                         if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), beaconPosition) < beaconRangeSqr)
                         {
-                            useGrid = false;
+                            useGroup = false;
+                            break;
                         }
                     }
+
+                    if(!useGroup)
+                        break;
                 }
-                if (useGrid)
+
+                if (useGroup)
                 {
-                    filteredGridData.Grids.Add(grid);
-                }
+                    filteredGridData.GridGroups.Add(gridGroup);
+                }             
             }
 
             return filteredGridData;
         }
 
+
         public struct GridData
         {
             public List<List<MyCubeGrid>> GridGroups;
-            public List<MyCubeGrid> Grids;
             public List<Vector3D> BeaconPositions;
             public List<Vector3D> PlayerPositions;
+
+            public int CountGrids()
+            {
+                int c = 0;
+                foreach (var grid in GridGroups)
+                {
+                    c += grid.Count();
+                }
+                return c;
+            }
         }
 
         /// <summary>
-        /// Scan all the grids to find those elegable for removal and Scrap Beacon positions. If fullList = true the list does not have inelegable grids removed.
+        /// Scan all the grids to find those elegable for removal by grid features (powered etc) and Scrap Beacon positions. If fullList = true the list does not have inelegable grids removed.
         /// </summary>
         /// <param name="fullList"></param>
         /// <returns></returns>
@@ -107,19 +129,19 @@ namespace Sclean.Commands
         {
             var gridData = new GridData();
             var gridGroups = new List<List<MyCubeGrid>>();
-            var gridList = new List<MyCubeGrid>();
             var beaconPositions = new List<Vector3D>();
 
-            ScleanPlugin.Log.Info($"Number of groups {MyCubeGridGroups.Static.Logical.Groups.Count}");
+            Log.Info($"Number of groups {MyCubeGridGroups.Static.Logical.Groups.Count}");
             Parallel.ForEach(MyCubeGridGroups.Static.Logical.Groups, (group) =>
             {
                 //Due to the locking do two stages, first does all the filtering and takes a long time. Second is a quick add to results.
-                ScleanPlugin.Log.Info($"Number of Nodes in group {group.Nodes.Count}");
+                Log.Info($"Number of Nodes in group {group.Nodes.Count}");
+                int c = 0;
                 bool store = true;
                 foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
                     store = true;
-                    ScleanPlugin.Log.Info($"Starting {node.NodeData.DisplayName}");
+                    Log.Info($"Starting {node.NodeData.DisplayName}");
 
                     MyCubeGrid grid = node.NodeData;
                     var gridInfo = GetGridInfo(grid);
@@ -131,51 +153,42 @@ namespace Sclean.Commands
                         {
                             beaconPositions.AddRange(gridInfo.BeaconPositions);
                         }
-                        // an optimisation 
-                        //store = fullList; // dont store this grid if it has a scrap beacon except for fullList=true
+                        store = fullList; // dont store this group if it has a scrap beacon except for fullList=true
                     }
                     
-                /*    // player grid and has power
+                    // player grid and has power
                     if (gridInfo.Owner == OwnerType.Player && gridInfo.IsPowered)
                     {
                         store = fullList;
-                    }*/
+                    }
                 }
 
                 if (store)
                 {
-                    lock (gridList)
-                    {
-                        foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
-                        {
-                            ScleanPlugin.Log.Info($"Adding {node.NodeData.DisplayName}");
-                            gridList.Add(node.NodeData);
-                        }
-                    }
                     lock (gridGroups)
                     {
                         List<MyCubeGrid> gridGroup = new List<MyCubeGrid>();
                         foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                         {
                             gridGroup.Add(node.NodeData);
+                            c++;
                         }
                         gridGroups.Add(gridGroup);
-                        ScleanPlugin.Log.Info($"GridGroups Added group size {gridGroup.Count}");
+                        Log.Info($"GridGroups Added group size {gridGroup.Count}");
                     }
                 }
 
             });
 
             gridData.GridGroups = gridGroups;
-            gridData.Grids = gridList;
             gridData.BeaconPositions = beaconPositions;
-            ScleanPlugin.Log.Info($"GridGroups count {gridGroups.Count}");
+
+            Log.Info($"GridGroups count {gridGroups.Count}");
             return gridData;
         }
 
         private struct GridInfo
         {
-            //public List<MyCubeBlock> Beacons;
             public List<Vector3D> BeaconPositions;
             public bool IsPowered;
             public OwnerType Owner;
@@ -192,7 +205,7 @@ namespace Sclean.Commands
         }
 
         /// <summary>
-        /// Consolodated scanning of a grid to retrieve all info in one pass
+        /// Consolodated scanning of a grid to retrieve the info in one pass
         /// </summary>
         /// <param name="grid"></param>
         /// <returns></returns>
@@ -203,18 +216,16 @@ namespace Sclean.Commands
                 BeaconPositions = new List<Vector3D>()
             };
 
-            //ScleanPlugin.Log.Info($"GetScrapBeacons grid name>{grid.DisplayName}");
-
             MyResourceSourceComponent? component;
             long ownerId;
 
             foreach (var block in ((MyCubeGrid)grid).GetFatBlocks())
             {
-                //ScleanPlugin.Log.Info($"grid name>{grid.DisplayName} TypeId: {block.BlockDefinition.Id.TypeId.ToString()}");
+                //Log.Info($"grid name>{grid.DisplayName} TypeId: {block.BlockDefinition.Id.TypeId.ToString()}");
 
                 if (block.BlockDefinition.Id.SubtypeId.ToString().EndsWith("Beacon"))
                 {
-                    ScleanPlugin.Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId}");
+                    Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId}");
                     gridInfo.BeaconPositions.Add(block.PositionComp.GetPosition());
                 }
 
@@ -241,8 +252,8 @@ namespace Sclean.Commands
                     gridInfo.Owner = OwnerType.Player;
             }
             if (gridInfo.BeaconPositions.Count > 0)
-                ScleanPlugin.Log.Info($"GridInfo  #beacons: {gridInfo.BeaconPositions.Count}");
-            ScleanPlugin.Log.Info($"GridInfo IsPowered: {gridInfo.IsPowered} (grid.Ispowered {grid.IsPowered} GridInfo Owner: {gridInfo.Owner}");
+                Log.Info($"GridInfo  #beacons: {gridInfo.BeaconPositions.Count}");
+            Log.Info($"GridInfo IsPowered: {gridInfo.IsPowered} (grid.Ispowered {grid.IsPowered} GridInfo Owner: {gridInfo.Owner}");
             return gridInfo;
 
         }
