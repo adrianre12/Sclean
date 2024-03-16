@@ -33,7 +33,7 @@ namespace Sclean.Commands
             int maxPlayerBeaconOffsetSqr = maxPlayerBeaconOffset * maxPlayerBeaconOffset;
 
             // Grid specific filtering is done in GetGridData
-            GridData gridData = GetGridData(true);
+            GridData gridData = GetGridData(false);
             GridData filteredGridData = new GridData
             {
                 GridGroups = new List<List<MyCubeGrid>>(),
@@ -140,11 +140,9 @@ namespace Sclean.Commands
                 bool store = true;
                 foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
-                    store = true;
-                    Log.Info($"Starting {node.NodeData.DisplayName}");
-
                     MyCubeGrid grid = node.NodeData;
                     var gridInfo = GetGridInfo(grid);
+                    Log.Info($"Grid: {node.NodeData.DisplayName} #Beacons: {gridInfo.BeaconPositions.Count} Owner: {gridInfo.Owner} IsPowered: {gridInfo.IsPowered}");
 
                     // has player beacon
                     if (gridInfo.BeaconPositions.Count > 0 && gridInfo.Owner == OwnerType.Player)
@@ -161,6 +159,8 @@ namespace Sclean.Commands
                     {
                         store = fullList;
                     }
+                    //Log.Info($"Grid: {node.NodeData.DisplayName} Store: {store}");
+
                 }
 
                 if (store)
@@ -225,7 +225,7 @@ namespace Sclean.Commands
 
                 if (block.BlockDefinition.Id.SubtypeId.ToString().EndsWith("Beacon"))
                 {
-                    Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId}");
+                    //Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId}");
                     gridInfo.BeaconPositions.Add(block.PositionComp.GetPosition());
                 }
 
@@ -251,9 +251,9 @@ namespace Sclean.Commands
                 else
                     gridInfo.Owner = OwnerType.Player;
             }
-            if (gridInfo.BeaconPositions.Count > 0)
+            /*if (gridInfo.BeaconPositions.Count > 0)
                 Log.Info($"GridInfo  #beacons: {gridInfo.BeaconPositions.Count}");
-            Log.Info($"GridInfo IsPowered: {gridInfo.IsPowered} (grid.Ispowered {grid.IsPowered} GridInfo Owner: {gridInfo.Owner}");
+            Log.Info($"GridInfo IsPowered: {gridInfo.IsPowered} (grid.Ispowered {grid.IsPowered} GridInfo Owner: {gridInfo.Owner}");*/
             return gridInfo;
 
         }
