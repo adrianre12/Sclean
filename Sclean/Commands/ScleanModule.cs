@@ -7,6 +7,7 @@ using VRage.Game.ModAPI;
 using System.Collections;
 using NLog;
 using Sandbox.Game.Entities;
+using static Sclean.Commands.CommandImp;
 
 namespace Sclean.Commands
 {
@@ -16,7 +17,7 @@ namespace Sclean.Commands
         private static readonly Logger Log = LogManager.GetLogger("Sclean");
 
         [Command("info", "Information about the plugin")]
-        [Permission(MyPromoteLevel.None)]
+        [Permission(MyPromoteLevel.Admin)]
         public void Info()
         {
             var sb = new StringBuilder();
@@ -30,6 +31,7 @@ namespace Sclean.Commands
         }
 
         [Command("delete", "Delete all grids using the ScrapYard rules")]
+        [Permission(MyPromoteLevel.Admin)]
         public void Delete()
         {
             Log.Info("delete command");
@@ -59,45 +61,29 @@ namespace Sclean.Commands
         }
 
         [Command("list", "List potental removals")]
-        [Permission(MyPromoteLevel.None)]
+        [Permission(MyPromoteLevel.Admin)]
         public void List() {
             Log.Info("list command");
             CommandImp.GridData gridData;
-            switch (Context.Args.Count())
-            {
-                case 0:
-                    {
-                        gridData = CommandImp.FilteredGridData(true);
-                        RespondGridData(gridData);
-                        break;
-                    }
+            gridData = CommandImp.FilteredGridData(true);
+            RespondGridData(gridData);
 
-                case 1:{
-                        switch (Context.Args[0].ToLower())
-                        {
-                            case "all":
-                                {
-                                    gridData = CommandImp.FilteredGridData(false);
-                                    RespondGridData(gridData);
-                                    break;
-                                }
-                            default:
-                                {
-                                    Context.Respond("Unknown argument");
-                                    break;
-                                }
-                        }
-                    break;
-                    }
 
-                default:
-                    {
-                        Context.Respond("Wrong number of arguments");
-                        break;
-                    }
-            }
+
         }
-        private void RespondGridData(CommandImp.GridData gridData)
+
+        [Command("list all", "List all grids considered")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ListAll()
+        {
+            Log.Info("list all command");
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData(false);
+            RespondGridData(gridData);
+        }
+
+
+            private void RespondGridData(CommandImp.GridData gridData)
         {
             Context.Respond("Listing");
 
@@ -117,11 +103,11 @@ namespace Sclean.Commands
             if (Context.SentBySelf)
             {
                 Context.Respond(sb.ToString());
-                Context.Respond($"Found {gridData.GridGroups.Count()} groups, total {c} grids matching the given conditions.");
+                Context.Respond($"Found {gridData.GridGroups.Count()} groups, total {c} grids matching.");
             }
             else
             {
-                var m = new DialogMessage("Sclean", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching", sb.ToString());
+                var m = new DialogMessage("Sclean", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching the Scrapyard rules", sb.ToString());
                 ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
             }
         }
