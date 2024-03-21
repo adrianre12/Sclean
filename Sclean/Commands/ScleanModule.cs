@@ -4,10 +4,8 @@ using Torch.Commands.Permissions;
 using Torch.Mod.Messages;
 using Torch.Mod;
 using VRage.Game.ModAPI;
-using System.Collections;
 using NLog;
 using Sandbox.Game.Entities;
-using static Sclean.Commands.CommandImp;
 
 namespace Sclean.Commands
 {
@@ -30,7 +28,7 @@ namespace Sclean.Commands
             Context.Respond(sb.ToString());
         }
 
-        [Command("delete", "Delete all grids using the ScrapYard rules")]
+        [Command("delete", "Delete grids using the ScrapYard rules")]
         [Permission(MyPromoteLevel.Admin)]
         public void Delete()
         {
@@ -48,7 +46,6 @@ namespace Sclean.Commands
                     var blocks = grid.GetFatBlocks<MyCockpit>();
                     foreach (var cockpit in blocks)
                     {
-                        Log.Info($"Ejecting Pilot from {grid.EntityId}: {grid.DisplayName}");
                         cockpit.RemovePilot();
                     }
 
