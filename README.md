@@ -1,18 +1,19 @@
 ## A Torch plugin for Scrapyard scenario cleanup.
+I wrote all the code but to avoid plagiarism I do admit that I have relied heavily on reading Essentials code to show me how to do it.
 
-I wrote all the code but to avoid plagerisum I do admidt that I have relied heavily on reading Essentials code to show me how to do it.
 
-
-### Why another plugin? we have Essentials Cleanup.
+### Why another plugin? We have Essentials Cleanup.
 Unlike Essential Cleanup, Sclean works on grid groups, a grid group is a grid with subgrids and connected grids and subgrids. For example, a base with a four-wheeled rover docked via connectors would be one grid group consisting of six grids. The grids are the base, rover body and four wheels. 
 With Essentials Cleanup if any grid in the group fails a condition the whole group fails. An example would be "!cleanup list hastype Beacon" for a rover with a Beacon, as the wheels do not have Beacons the whole rover fails the condition and is not returned.
 With Sclean if any grid in a group satisfies one of the requirements then the whole grid group is kept. This means Sclean can find all grids with Beacons. 
 
-In Sclean the requirements are hard coded partly for efficency but mainly becuase the Scrapyard Scenario has very specific rules.
+
+In Sclean the requirements are hard coded partly for efficiency but mainly because the Scrapyard Scenario has very specific rules.
 The requirements for a grid to be kept are: 
 * Is player owned and powered. 
 * Is within the safe AOE range of the player. 
 * Is within the safe AOE range of the Scrap Beacon.
+
 
 Plus:
 * The safe zones apply to any ownership, this ensures that found scrap is not removed. 
@@ -21,29 +22,39 @@ Plus:
 * The ranges for the safe zones can be set in configuration.
 * Sclean optimises the scan by not using any beacon that has it's AOE inside the player's AOE. 
 
+
 Sclean only does what Essentials Cleanup can't do, you still need to use Cleanup to remove floating objects and reset voxels 
+
 
 ### Use:
 
+
+Show which grids/groups would be deleted.
 ```
 !sclean list
 ```
-Show which grids/groups would be deleted.
 
+
+Show all grids/groups.
 ```
 !sclean list all
 ```
-Show all grids/groups.
 
+
+Delete grids/groups.
 ```
 !sclean delete
 ```
-Delete grids/groups.
 
+
+Show the current configuration.
 ```
 !sclean info
 ```
-Show the current configuration.
+
 
 ### Install:
 Putting Sclean.zip in the plugins folder will not work as Torch assumes it is a downloaded plugin. It needs to be installed as a local plugin, just extract the zip into a folder called Sclean and Torch will use it.
+
+
+
