@@ -37,22 +37,28 @@ namespace Sclean.Commands
                 filteredGridData.PlayerPositions.Add(player.GetPosition());
             }
 
-            //Assume player range is larger than beacon range and find if beacons are inside players range
-            bool useBeacon;
-            foreach (var beaconPosition in gridData.BeaconPositions)
+            //Only do if Player range is greater than beacon range
+            if (playerRange > beaconRange)
             {
-                useBeacon = true;
-                foreach(var playerPosition in filteredGridData.PlayerPositions)
+                bool useBeacon;
+                foreach (var beaconPosition in gridData.BeaconPositions)
                 {
-                    if(Vector3D.DistanceSquared(beaconPosition,playerPosition) < maxPlayerBeaconOffsetSqr)
+                    useBeacon = true;
+                    foreach (var playerPosition in filteredGridData.PlayerPositions)
                     {
-                        useBeacon = false;
+                        if (Vector3D.DistanceSquared(beaconPosition, playerPosition) < maxPlayerBeaconOffsetSqr)
+                        {
+                            useBeacon = false;
+                        }
+                    }
+                    if (useBeacon)
+                    {
+                        filteredGridData.BeaconPositions.Add(beaconPosition);
                     }
                 }
-                if (useBeacon)
-                {
-                    filteredGridData.BeaconPositions.Add(beaconPosition);
-                }
+            } else
+            {
+                Log.Warn("PlayerRange is less than BeaconRange, beacon optimisation not done.");
             }
 
             // filter by distance from player and beacon. Non player grids also have to be protected.
