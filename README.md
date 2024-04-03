@@ -1,3 +1,4 @@
+# DON'T USE THIS IS WORK IN PROGRESS
 ## A Torch plugin for Scrapyard scenario cleanup.
 I wrote all the code but to avoid plagiarism I do admit that I have relied heavily on reading Essentials code to show me how to do it.
 
