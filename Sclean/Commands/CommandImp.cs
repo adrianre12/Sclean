@@ -33,7 +33,8 @@ namespace Sclean.Commands
             };
 
             // get player positions
-            foreach(var player in MySession.Static.Players.GetOnlinePlayers()) {
+            foreach (var player in MySession.Static.Players.GetOnlinePlayers())
+            {
                 filteredGridData.PlayerPositions.Add(player.GetPosition());
             }
 
@@ -56,7 +57,8 @@ namespace Sclean.Commands
                         filteredGridData.BeaconPositions.Add(beaconPosition);
                     }
                 }
-            } else
+            }
+            else
             {
                 Log.Warn("PlayerRange is less than BeaconRange, beacon optimisation not done.");
             }
@@ -86,19 +88,18 @@ namespace Sclean.Commands
                         }
                     }
 
-                    if(!useGroup)
+                    if (!useGroup)
                         break;
                 }
 
                 if (!filter || useGroup)
                 {
                     filteredGridData.GridGroups.Add(gridGroup);
-                }             
+                }
             }
 
             return filteredGridData;
         }
-
 
         public struct GridData
         {
@@ -147,7 +148,7 @@ namespace Sclean.Commands
                         }
                         use = false; // Not really needed as it would be filtered later by the beacon zone but it is an optimisation.
                     }
-                    
+
                     // player grid and has power
                     if (gridInfo.Owner == OwnerType.Player && gridInfo.IsPowered)
                     {
@@ -223,33 +224,29 @@ namespace Sclean.Commands
                     gridInfo.BeaconPositions.Add(block.PositionComp.GetPosition());
                 }
 
-
                 component = block.Components?.Get<MyResourceSourceComponent>();
                 if (component != null && component.ResourceTypes.Contains(MyResourceDistributorComponent.ElectricityId))
                 {
                     if (component.HasCapacityRemainingByType(MyResourceDistributorComponent.ElectricityId) && component.ProductionEnabledByType(MyResourceDistributorComponent.ElectricityId))
                         gridInfo.IsPowered = true;
                 }
-
-                if (grid.BigOwners.Count > 0 && grid.BigOwners[0] != 0)
-                    ownerId = grid.BigOwners[0];
-                else if (grid.BigOwners.Count > 1)
-                    ownerId = grid.BigOwners[1];
-                else
-                    ownerId = 0L;
-
-                if (ownerId == 0L)
-                    gridInfo.Owner = OwnerType.Nobody;
-                else if (MySession.Static.Players.IdentityIsNpc(ownerId))
-                    gridInfo.Owner = OwnerType.NPC;
-                else
-                    gridInfo.Owner = OwnerType.Player;
             }
-            /*if (gridInfo.BeaconPositions.Count > 0)
-                Log.Info($"GridInfo  #beacons: {gridInfo.BeaconPositions.Count}");
-            Log.Info($"GridInfo IsPowered: {gridInfo.IsPowered} (grid.Ispowered {grid.IsPowered} GridInfo Owner: {gridInfo.Owner}");*/
-            return gridInfo;
 
+            if (grid.BigOwners.Count > 0 && grid.BigOwners[0] != 0)
+                ownerId = grid.BigOwners[0];
+            else if (grid.BigOwners.Count > 1)
+                ownerId = grid.BigOwners[1];
+            else
+                ownerId = 0L;
+
+            if (ownerId == 0L)
+                gridInfo.Owner = OwnerType.Nobody;
+            else if (MySession.Static.Players.IdentityIsNpc(ownerId))
+                gridInfo.Owner = OwnerType.NPC;
+            else
+                gridInfo.Owner = OwnerType.Player;
+
+            return gridInfo;
         }
     }
 }

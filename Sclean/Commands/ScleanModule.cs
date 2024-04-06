@@ -36,12 +36,13 @@ namespace Sclean.Commands
             CommandImp.GridData gridData = CommandImp.FilteredGridData(true);
 
             var c = 0;
-            foreach ( var gridGroup in gridData.GridGroups ) {
+            foreach (var gridGroup in gridData.GridGroups)
+            {
                 foreach (var grid in gridGroup)
                 {
                     c++;
                     Log.Info($"Deleting grid: {grid.EntityId}: {grid.DisplayName}");
-                    
+
                     //Eject Pilot
                     var blocks = grid.GetFatBlocks<MyCockpit>();
                     foreach (var cockpit in blocks)
@@ -59,14 +60,12 @@ namespace Sclean.Commands
 
         [Command("list", "List potental removals")]
         [Permission(MyPromoteLevel.Admin)]
-        public void List() {
+        public void List()
+        {
             Log.Info("list command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData(true);
             RespondGridData(gridData);
-
-
-
         }
 
         [Command("list all", "List all grids considered")]
@@ -79,8 +78,7 @@ namespace Sclean.Commands
             RespondGridData(gridData);
         }
 
-
-            private void RespondGridData(CommandImp.GridData gridData)
+        private void RespondGridData(CommandImp.GridData gridData)
         {
             Context.Respond("Listing");
 
@@ -90,13 +88,13 @@ namespace Sclean.Commands
             foreach (var gridGroup in gridData.GridGroups)
             {
                 sb.AppendLine("---");
-                foreach(var grid in gridGroup)
+                foreach (var grid in gridGroup)
                 {
                     c++;
                     sb.AppendLine($"  {grid.DisplayName} ({grid.BlocksCount} block(s))");
                 }
             }
-            
+
             if (Context.SentBySelf)
             {
                 Context.Respond(sb.ToString());

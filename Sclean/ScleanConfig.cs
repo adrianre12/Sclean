@@ -7,7 +7,7 @@ namespace Sclean
     {
         private string _beaconSubtype = "ScrapBeacon";
         [Display(Name = "Beacon Subtype name", Description = "Beacon SubtypeId ends with this")]
-        public string BeaconSubtype { get => _beaconSubtype; set => SetValue(ref _beaconSubtype,value); }
+        public string BeaconSubtype { get => _beaconSubtype; set => SetValue(ref _beaconSubtype, value); }
 
         private int _playerRange = 10000;
         [Display(Name = "Player", GroupName = "Protection Range", Description = "Radius of the protection AOE")]
