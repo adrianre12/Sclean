@@ -12,6 +12,8 @@ namespace Sclean.Commands
     [Category("sclean")]
     public class ScleanModule : CommandModule
     {
+        const string Version = "v1.0.2";
+
         private static readonly Logger Log = LogManager.GetLogger("Sclean");
 
         [Command("info", "Information about the plugin")]
@@ -19,7 +21,7 @@ namespace Sclean.Commands
         public void Info()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("Information");
+            sb.AppendLine($"Information {Version}");
             sb.AppendLine($"Beacon SubtypeId ends with: {ScleanPlugin.Instance.Config.BeaconSubtype}");
             sb.AppendLine("Ranges");
             sb.AppendLine($"  Player: {ScleanPlugin.Instance.Config.PlayerRange}");
