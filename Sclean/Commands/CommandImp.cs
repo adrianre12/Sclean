@@ -20,8 +20,8 @@ namespace Sclean.Commands
             int playerRangeSqr = playerRange * playerRange;
             int beaconRange = ScleanPlugin.Instance.Config.ScrapBeaconRange;
             int beaconRangeSqr = beaconRange * beaconRange;
-            int maxPlayerBeaconOffset = playerRange - beaconRange;
-            int maxPlayerBeaconOffsetSqr = maxPlayerBeaconOffset * maxPlayerBeaconOffset;
+ //           int maxPlayerBeaconOffset = playerRange - beaconRange;
+ //           int maxPlayerBeaconOffsetSqr = maxPlayerBeaconOffset * maxPlayerBeaconOffset;
 
             // Grid specific filtering is done in GetGridData
             GridData gridData = GetGridData(filter);
@@ -38,30 +38,7 @@ namespace Sclean.Commands
                 filteredGridData.PlayerPositions.Add(player.GetPosition());
             }
 
-            //Only do if Player range is greater than beacon range
-            if (playerRange > beaconRange)
-            {
-                bool useBeacon;
-                foreach (var beaconPosition in gridData.BeaconPositions)
-                {
-                    useBeacon = true;
-                    foreach (var playerPosition in filteredGridData.PlayerPositions)
-                    {
-                        if (Vector3D.DistanceSquared(beaconPosition, playerPosition) < maxPlayerBeaconOffsetSqr)
-                        {
-                            useBeacon = false;
-                        }
-                    }
-                    if (useBeacon)
-                    {
-                        filteredGridData.BeaconPositions.Add(beaconPosition);
-                    }
-                }
-            }
-            else
-            {
-                Log.Warn("PlayerRange is less than BeaconRange, beacon optimisation not done.");
-            }
+            filteredGridData.BeaconPositions = gridData.BeaconPositions;
 
             // filter by distance from player and beacon. Non player grids also have to be protected.
             bool useGroup;
@@ -78,6 +55,9 @@ namespace Sclean.Commands
                             break;
                         }
                     }
+
+                    if (!useGroup)
+                        break;
 
                     foreach (var beaconPosition in filteredGridData.BeaconPositions)
                     {
