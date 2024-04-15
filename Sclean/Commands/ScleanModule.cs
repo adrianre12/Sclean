@@ -6,6 +6,8 @@ using Torch.Mod;
 using VRage.Game.ModAPI;
 using NLog;
 using Sandbox.Game.Entities;
+using Sandbox.Game.World;
+using static Sclean.Commands.CommandImp;
 
 namespace Sclean.Commands
 {
@@ -64,7 +66,7 @@ namespace Sclean.Commands
                 foreach (var grid in gridGroup)
                 {
                     c++;
-                    Log.Info($"Deleting grid: {grid.EntityId}: {grid.DisplayName}");
+                    Log.Info($"Deleting grid: {grid.EntityId}: {grid.DisplayName} {getGridOwner(grid)}");
 
                     //Eject Pilot
                     var blocks = grid.GetFatBlocks<MyCockpit>();
@@ -77,6 +79,23 @@ namespace Sclean.Commands
                 }
             }
             return c;
+        }
+
+        private string getGridOwner(MyCubeGrid grid)
+        {
+            long ownerId;
+            if (grid.BigOwners.Count > 0 && grid.BigOwners[0] != 0)
+                ownerId = grid.BigOwners[0];
+            else if (grid.BigOwners.Count > 1)
+                ownerId = grid.BigOwners[1];
+            else
+                return "Nobody 0";
+
+            MyIdentity player = MySession.Static.Players.TryGetIdentity(ownerId);
+            if (player == null)
+                return "Not Found";
+
+            return player.DisplayName;
         }
 
         [Command("list", "List potental removals")]
@@ -122,7 +141,7 @@ namespace Sclean.Commands
                 foreach (var grid in gridGroup)
                 {
                     c++;
-                    sb.AppendLine($"  {grid.DisplayName} ({grid.BlocksCount} block(s))");
+                    sb.AppendLine($"  {grid.DisplayName} {getGridOwner(grid)} ({grid.BlocksCount} block(s))");
                 }
             }
 
