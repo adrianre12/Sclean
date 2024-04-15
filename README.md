@@ -35,6 +35,12 @@ Show which grids/groups would be deleted.
 ```
 
 
+Show which grids/groups would be deleted ignoring players.
+```
+!sclean list
+```
+
+
 Show all grids/groups.
 ```
 !sclean list all
@@ -52,6 +58,10 @@ Show the current configuration.
 !sclean info
 ```
 
+Delete grids/groups ignoring players.
+```
+!sclean delete nop
+```
 
 ### Install:
 This has been published and is available via the Torch Client.
