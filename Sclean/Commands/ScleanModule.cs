@@ -12,8 +12,6 @@ namespace Sclean.Commands
     [Category("sclean")]
     public class ScleanModule : CommandModule
     {
-        const string Version = "v1.0.2";
-
         private static readonly Logger Log = LogManager.GetLogger("Sclean");
 
         [Command("info", "Information about the plugin")]
@@ -21,7 +19,7 @@ namespace Sclean.Commands
         public void Info()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"Information {Version}");
+            sb.AppendLine($"Information {ScleanPlugin.Instance.Version}");
             sb.AppendLine($"Beacon SubtypeId ends with: {ScleanPlugin.Instance.Config.BeaconSubtype}");
             sb.AppendLine("Ranges");
             sb.AppendLine($"  Player: {ScleanPlugin.Instance.Config.PlayerRange}");
@@ -35,8 +33,31 @@ namespace Sclean.Commands
         public void Delete()
         {
             Log.Info("delete command");
-            CommandImp.GridData gridData = CommandImp.FilteredGridData(true);
+            CommandImp.GridData gridData = CommandImp.FilteredGridData(true, false);
 
+            var c = deleteGrids(gridData);
+
+            Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
+            Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
+
+        }
+
+        [Command("delete nop", "Delete grids using the ScrapYard rules but ignoring players")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void DeleteNop()
+        {
+            Log.Info("delete command");
+            CommandImp.GridData gridData = CommandImp.FilteredGridData(true, true);
+
+            var c = deleteGrids(gridData);
+
+            Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
+            Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
+
+        }
+
+        private int deleteGrids(CommandImp.GridData gridData)
+        {
             var c = 0;
             foreach (var gridGroup in gridData.GridGroups)
             {
@@ -55,9 +76,7 @@ namespace Sclean.Commands
                     grid.Close();
                 }
             }
-            Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
-            Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
-
+            return c;
         }
 
         [Command("list", "List potental removals")]
@@ -66,7 +85,17 @@ namespace Sclean.Commands
         {
             Log.Info("list command");
             CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(true);
+            gridData = CommandImp.FilteredGridData(true, false);
+            RespondGridData(gridData);
+        }
+
+        [Command("list nop", "List potental removals ignoring players")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ListNop()
+        {
+            Log.Info("list nop command");
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData(true, true);
             RespondGridData(gridData);
         }
 
@@ -76,7 +105,7 @@ namespace Sclean.Commands
         {
             Log.Info("list all command");
             CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(false);
+            gridData = CommandImp.FilteredGridData(false, true);
             RespondGridData(gridData);
         }
 

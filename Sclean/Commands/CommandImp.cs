@@ -14,31 +14,30 @@ namespace Sclean.Commands
         /// Performs the distance filter on gridData
         /// </summary>
         /// <returns></returns>
-        public static GridData FilteredGridData(bool filter)
+        public static GridData FilteredGridData(bool filter, bool ignorePlayers)
         {
             int playerRange = ScleanPlugin.Instance.Config.PlayerRange;
             int playerRangeSqr = playerRange * playerRange;
             int beaconRange = ScleanPlugin.Instance.Config.ScrapBeaconRange;
             int beaconRangeSqr = beaconRange * beaconRange;
- //           int maxPlayerBeaconOffset = playerRange - beaconRange;
- //           int maxPlayerBeaconOffsetSqr = maxPlayerBeaconOffset * maxPlayerBeaconOffset;
-
+ 
             // Grid specific filtering is done in GetGridData
             GridData gridData = GetGridData(filter);
             GridData filteredGridData = new GridData
             {
                 GridGroups = new List<List<MyCubeGrid>>(),
-                BeaconPositions = new List<Vector3D>(),
+                BeaconPositions = gridData.BeaconPositions,
                 PlayerPositions = new List<Vector3D>(),
             };
 
             // get player positions
-            foreach (var player in MySession.Static.Players.GetOnlinePlayers())
+            if (!ignorePlayers)
             {
-                filteredGridData.PlayerPositions.Add(player.GetPosition());
+                foreach (var player in MySession.Static.Players.GetOnlinePlayers())
+                {
+                    filteredGridData.PlayerPositions.Add(player.GetPosition());
+                }
             }
-
-            filteredGridData.BeaconPositions = gridData.BeaconPositions;
 
             // filter by distance from player and beacon. Non player grids also have to be protected.
             bool useGroup;
