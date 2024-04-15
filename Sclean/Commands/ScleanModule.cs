@@ -58,27 +58,63 @@ namespace Sclean.Commands
 
         }
 
-        private int deleteGrids(CommandImp.GridData gridData)
+        [Command("list", "List potental removals")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void List()
         {
-            var c = 0;
+            Log.Info("list command");
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData(true, false);
+            respondGridData(gridData);
+        }
+
+        [Command("list nop", "List potental removals ignoring players")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ListNop()
+        {
+            Log.Info("list nop command");
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData(true, true);
+            respondGridData(gridData);
+        }
+
+        [Command("list all", "List all grids considered")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ListAll()
+        {
+            Log.Info("list all command");
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData(false, true);
+            respondGridData(gridData);
+        }
+
+        private void respondGridData(CommandImp.GridData gridData)
+        {
+            Context.Respond("Listing");
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Active Safe Zones: Player={gridData.PlayerPositions.Count} Beacon={gridData.BeaconPositions.Count}");
+            int c = 0;
             foreach (var gridGroup in gridData.GridGroups)
             {
+                sb.AppendLine("---");
                 foreach (var grid in gridGroup)
                 {
                     c++;
-                    Log.Info($"Deleting grid: {grid.EntityId}: {grid.DisplayName} {getGridOwner(grid)}");
-
-                    //Eject Pilot
-                    var blocks = grid.GetFatBlocks<MyCockpit>();
-                    foreach (var cockpit in blocks)
-                    {
-                        cockpit.RemovePilot();
-                    }
-
-                    grid.Close();
+                    sb.AppendLine($"  {getGridOwner(grid)}: {grid.DisplayName} ({grid.BlocksCount} block(s))");
                 }
             }
-            return c;
+
+            if (Context.SentBySelf)
+            {
+                Context.Respond(sb.ToString());
+                Context.Respond($"Found {gridData.GridGroups.Count()} groups, total {c} grids matching.");
+            }
+            else
+            {
+                var m = new DialogMessage("Sclean", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching the Scrapyard rules", sb.ToString());
+                ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
+            }
         }
 
         private string getGridOwner(MyCubeGrid grid)
@@ -98,63 +134,28 @@ namespace Sclean.Commands
             return player.DisplayName;
         }
 
-        [Command("list", "List potental removals")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void List()
-        {
-            Log.Info("list command");
-            CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(true, false);
-            RespondGridData(gridData);
-        }
 
-        [Command("list nop", "List potental removals ignoring players")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void ListNop()
+        private int deleteGrids(CommandImp.GridData gridData)
         {
-            Log.Info("list nop command");
-            CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(true, true);
-            RespondGridData(gridData);
-        }
-
-        [Command("list all", "List all grids considered")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void ListAll()
-        {
-            Log.Info("list all command");
-            CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(false, true);
-            RespondGridData(gridData);
-        }
-
-        private void RespondGridData(CommandImp.GridData gridData)
-        {
-            Context.Respond("Listing");
-
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"Active Safe Zones: Player={gridData.PlayerPositions.Count} Beacon={gridData.BeaconPositions.Count}");
-            int c = 0;
+            var c = 0;
             foreach (var gridGroup in gridData.GridGroups)
             {
-                sb.AppendLine("---");
                 foreach (var grid in gridGroup)
                 {
                     c++;
-                    sb.AppendLine($"  {grid.DisplayName} {getGridOwner(grid)} ({grid.BlocksCount} block(s))");
+                    Log.Info($"Deleting grid: {grid.EntityId}: {getGridOwner(grid)}: {grid.DisplayName}");
+
+                    //Eject Pilot
+                    var blocks = grid.GetFatBlocks<MyCockpit>();
+                    foreach (var cockpit in blocks)
+                    {
+                        cockpit.RemovePilot();
+                    }
+
+                    grid.Close();
                 }
             }
-
-            if (Context.SentBySelf)
-            {
-                Context.Respond(sb.ToString());
-                Context.Respond($"Found {gridData.GridGroups.Count()} groups, total {c} grids matching.");
-            }
-            else
-            {
-                var m = new DialogMessage("Sclean", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching the Scrapyard rules", sb.ToString());
-                ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
-            }
+            return c;
         }
     }
 }
