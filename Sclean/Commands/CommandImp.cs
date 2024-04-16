@@ -119,7 +119,7 @@ namespace Sclean.Commands
                     var gridInfo = GetGridInfo(grid);
 
                     // has player beacon
-                    if (gridInfo.BeaconPositions.Count > 0 && gridInfo.Owner == OwnerType.Player)
+                    if (gridInfo.BeaconPositions.Count > 0)
                     {
                         lock (beaconPositions)
                         {
