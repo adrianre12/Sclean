@@ -35,9 +35,9 @@ namespace Sclean.Commands
         public void Delete()
         {
             Log.Info("delete command");
-            CommandImp.GridData gridData = CommandImp.FilteredGridData(true, false);
+            CommandImp.GridData gridData = CommandImp.FilteredGridData();
 
-            var c = deleteGrids(gridData);
+            var c = deleteGrids(gridData, false);
 
             Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
             Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
@@ -49,9 +49,9 @@ namespace Sclean.Commands
         public void DeleteNop()
         {
             Log.Info("delete command");
-            CommandImp.GridData gridData = CommandImp.FilteredGridData(true, true);
+            CommandImp.GridData gridData = CommandImp.FilteredGridData();
 
-            var c = deleteGrids(gridData);
+            var c = deleteGrids(gridData, true);
 
             Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
             Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
@@ -64,8 +64,8 @@ namespace Sclean.Commands
         {
             Log.Info("list command");
             CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(true, false);
-            respondGridData(gridData);
+            gridData = CommandImp.FilteredGridData();
+            respondGridData(gridData, false, false);
         }
 
         [Command("list nop", "List potental removals ignoring players")]
@@ -74,8 +74,8 @@ namespace Sclean.Commands
         {
             Log.Info("list nop command");
             CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(true, true);
-            respondGridData(gridData);
+            gridData = CommandImp.FilteredGridData();
+            respondGridData(gridData, false, true);
         }
 
         [Command("list all", "List all grids considered")]
@@ -84,21 +84,27 @@ namespace Sclean.Commands
         {
             Log.Info("list all command");
             CommandImp.GridData gridData;
-            gridData = CommandImp.FilteredGridData(false, true);
-            respondGridData(gridData);
+            gridData = CommandImp.FilteredGridData();
+            respondGridData(gridData, true, false);
         }
 
-        private void respondGridData(CommandImp.GridData gridData)
+        private void respondGridData(CommandImp.GridData gridData, bool showAll, bool ignorePlayers)
         {
             Context.Respond("Listing");
-
+            
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"Active Safe Zones: Player={gridData.PlayerPositions.Count} Beacon={gridData.BeaconPositions.Count}");
+            int numPlayers = ignorePlayers ? 0 : gridData.PlayerInfos.Count;
+            sb.AppendLine($"Active Safe Zones: Player={numPlayers} Beacon={gridData.BeaconInfos.Count}");
             int c = 0;
-            foreach (var gridGroup in gridData.GridGroups)
+            int g = 0;
+            foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
+                if (!gridGroupInfo.Protector.Selection(showAll, ignorePlayers))
+                    continue;
+
+                g++;
                 sb.AppendLine("---");
-                foreach (var grid in gridGroup)
+                foreach (var grid in gridGroupInfo.GridGroup)
                 {
                     c++;
                     sb.AppendLine($"  {getGridOwner(grid)}: {grid.DisplayName} ({grid.BlocksCount} block(s))");
@@ -108,11 +114,11 @@ namespace Sclean.Commands
             if (Context.SentBySelf)
             {
                 Context.Respond(sb.ToString());
-                Context.Respond($"Found {gridData.GridGroups.Count()} groups, total {c} grids matching.");
+                Context.Respond($"Found {g} groups, total {c} grids matching.");
             }
             else
             {
-                var m = new DialogMessage("Sclean", null, $"Found {gridData.GridGroups.Count()} groups, total {c} matching the Scrapyard rules", sb.ToString());
+                var m = new DialogMessage("Sclean", null, $"Found {g} groups, total {c} matching the Scrapyard rules", sb.ToString());
                 ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
             }
         }
@@ -135,12 +141,15 @@ namespace Sclean.Commands
         }
 
 
-        private int deleteGrids(CommandImp.GridData gridData)
+        private int deleteGrids(CommandImp.GridData gridData, bool ignorePlayers)
         {
             var c = 0;
-            foreach (var gridGroup in gridData.GridGroups)
+            foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
-                foreach (var grid in gridGroup)
+                if (!gridGroupInfo.Protector.Selection(false, ignorePlayers))
+                    continue;
+
+                foreach (var grid in gridGroupInfo.GridGroup)
                 {
                     c++;
                     Log.Info($"Deleting grid: {grid.EntityId}: {getGridOwner(grid)}: {grid.DisplayName}");
