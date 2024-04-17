@@ -65,7 +65,7 @@ namespace Sclean.Commands
             Log.Info("list command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData, false, false, false, true);
+            respondGridData(gridData, "List Deletable", false, false, false, true);
         }
 
         [Command("list nop", "List potental removals ignoring players")]
@@ -75,7 +75,7 @@ namespace Sclean.Commands
             Log.Info("list nop command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData, true, false, false, true);
+            respondGridData(gridData,"List Deletable Ignoring Players", true, false, false, true);
         }
 
         [Command("list all", "List all grids considered")]
@@ -85,7 +85,7 @@ namespace Sclean.Commands
             Log.Info("list all command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData, true, true, true, true);
+            respondGridData(gridData, "List All", true, true, true, true);
         }
 
         [Command("list prot", "List all grids that are protected from deletion.")]
@@ -95,21 +95,22 @@ namespace Sclean.Commands
             Log.Info("list prot command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData, true, true, true, false);
+            respondGridData(gridData, "List Protected", true, true, true, false);
         }
 
-        private void respondGridData(CommandImp.GridData gridData, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
+        private void respondGridData(CommandImp.GridData gridData, string title, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
         {
-            Context.Respond("Listing");
+            Context.Respond(title);
             
             StringBuilder sb = new StringBuilder();
-            int numPlayers = selectPlayer ? 0 : gridData.PlayerInfos.Count;
-            sb.AppendLine($"Active Safe Zones: Player={numPlayers} Beacon={gridData.BeaconInfos.Count}");
+            sb.AppendLine($"Active Safe Zones: Player={gridData.PlayerInfos.Count} Beacon={gridData.BeaconInfos.Count}");
             int c = 0;
             int g = 0;
             string sectionTitle = "";
             string newSectionTitle = "";
+
             gridData.GridGroupInfos.Sort();
+
             foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
                 if (!gridGroupInfo.Protector.Selection(selectPlayer, selectBeacon, selectPowered, selectNone))
@@ -134,14 +135,16 @@ namespace Sclean.Commands
                 }
             }
 
+            sb.AppendLine("");
+            sb.AppendLine($"Found {g} groups, total {c} matching the Scrapyard rules");
+            
             if (Context.SentBySelf)
             {
                 Context.Respond(sb.ToString());
-                Context.Respond($"Found {g} groups, total {c} grids matching.");
             }
             else
             {
-                var m = new DialogMessage("Sclean", null, $"Found {g} groups, total {c} matching the Scrapyard rules", sb.ToString());
+                var m = new DialogMessage("Sclean", null, title, sb.ToString());
                 ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
             }
         }
