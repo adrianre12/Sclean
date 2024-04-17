@@ -33,6 +33,7 @@ namespace Sclean.Commands
                     ProtectionType = ProtectionTypeEnum.Player,
                     Name = player.Identity.DisplayName,
                     OwnerId = player.Identity.IdentityId,
+                    OwnerName = player.Identity.DisplayName,
                     Position = player.GetPosition(),
                 };
                     
@@ -92,6 +93,7 @@ namespace Sclean.Commands
         {
             public Vector3D Position = Vector3D.Zero;
             public string Name = "";
+            public string OwnerName = "";
             public long OwnerId = 0L;
             public ProtectionTypeEnum ProtectionType = ProtectionTypeEnum.None;
 
@@ -236,6 +238,12 @@ namespace Sclean.Commands
             Player
         }
 
+        private static string GetOwnerName(long ownerId) {
+            MyIdentity player = MySession.Static.Players.TryGetIdentity(ownerId);
+
+            return player == null ? "" : player.DisplayName;
+        }
+
         /// <summary>
         /// Consolodated scanning of a grid to retrieve the info in one pass
         /// </summary>
@@ -277,7 +285,8 @@ namespace Sclean.Commands
                         ProtectionType = ProtectionTypeEnum.Beacon,
                         Position = block.PositionComp.GetPosition(),
                         Name = block.Name,
-                        OwnerId = gridInfo.OwnerId
+                        OwnerId = gridInfo.OwnerId,
+                        OwnerName = GetOwnerName(gridInfo.OwnerId)
                     });
                 }
 

@@ -103,7 +103,7 @@ namespace Sclean.Commands
                     continue;
 
                 ++g;
-                sb.AppendLine($"--- {gridGroupInfo.Protector.ProtectionType}");
+                sb.AppendLine($"--- {gridGroupInfo.Protector.ProtectionType} {gridGroupInfo.Protector.OwnerName}");
                 foreach (var grid in gridGroupInfo.GridGroup)
                 {
                     ++c;
