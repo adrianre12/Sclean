@@ -2,5 +2,5 @@
 <PluginManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <Name>Sclean</Name>
     <Guid>0D875DBF-3C1A-435B-A12E-7B47BFAEBBE4</Guid>
-    <Version>v1.1.0</Version>
+    <Version>v1.2.0</Version>
 </PluginManifest>

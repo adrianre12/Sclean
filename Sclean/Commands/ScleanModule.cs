@@ -37,7 +37,7 @@ namespace Sclean.Commands
             Log.Info("delete command");
             CommandImp.GridData gridData = CommandImp.FilteredGridData();
 
-            var c = deleteGrids(gridData, false);
+            var c = deleteGrids(gridData, false, false, false, true);
 
             Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
             Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
@@ -51,7 +51,7 @@ namespace Sclean.Commands
             Log.Info("delete command");
             CommandImp.GridData gridData = CommandImp.FilteredGridData();
 
-            var c = deleteGrids(gridData, true);
+            var c = deleteGrids(gridData, true, false, false, true);
 
             Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
             Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
@@ -65,7 +65,7 @@ namespace Sclean.Commands
             Log.Info("list command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData, false, false);
+            respondGridData(gridData, false, false, false, true);
         }
 
         [Command("list nop", "List potental removals ignoring players")]
@@ -75,7 +75,7 @@ namespace Sclean.Commands
             Log.Info("list nop command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData, false, true);
+            respondGridData(gridData, true, false, false, true);
         }
 
         [Command("list all", "List all grids considered")]
@@ -85,29 +85,52 @@ namespace Sclean.Commands
             Log.Info("list all command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData, true, false);
+            respondGridData(gridData, true, true, true, true);
         }
 
-        private void respondGridData(CommandImp.GridData gridData, bool showAll, bool ignorePlayers)
+        [Command("list prot", "List all grids that are protected from deletion.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ListProt()
+        {
+            Log.Info("list prot command");
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData();
+            respondGridData(gridData, true, true, true, false);
+        }
+
+        private void respondGridData(CommandImp.GridData gridData, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
         {
             Context.Respond("Listing");
             
             StringBuilder sb = new StringBuilder();
-            int numPlayers = ignorePlayers ? 0 : gridData.PlayerInfos.Count;
+            int numPlayers = selectPlayer ? 0 : gridData.PlayerInfos.Count;
             sb.AppendLine($"Active Safe Zones: Player={numPlayers} Beacon={gridData.BeaconInfos.Count}");
             int c = 0;
             int g = 0;
+            string sectionTitle = "";
+            string newSectionTitle = "";
+            gridData.GridGroupInfos.Sort();
             foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
-                if (!gridGroupInfo.Protector.Selection(showAll, ignorePlayers))
+                if (!gridGroupInfo.Protector.Selection(selectPlayer, selectBeacon, selectPowered, selectNone))
                     continue;
 
                 ++g;
-                sb.AppendLine($"--- {gridGroupInfo.Protector.ProtectionType} {gridGroupInfo.Protector.OwnerName}");
+                newSectionTitle = $"{gridGroupInfo.Protector.ProtectionType} {gridGroupInfo.SortString()}";
+                if (sectionTitle.Equals(newSectionTitle))
+                {
+                    sb.AppendLine($"---");
+                } else
+                {
+                    sectionTitle = newSectionTitle;
+                    sb.AppendLine("");
+                    sb.AppendLine(sectionTitle);
+                }
+
                 foreach (var grid in gridGroupInfo.GridGroup)
                 {
                     ++c;
-                    sb.AppendLine($"  {getGridOwner(grid)}: {grid.DisplayName} ({grid.BlocksCount} block(s))");
+                    sb.AppendLine($"   {getGridOwner(grid)}: {grid.DisplayName} ({grid.BlocksCount} block(s))");
                 }
             }
 
@@ -131,7 +154,7 @@ namespace Sclean.Commands
             else if (grid.BigOwners.Count > 1)
                 ownerId = grid.BigOwners[1];
             else
-                return "Nobody 0";
+                return "Nobody";
 
             MyIdentity player = MySession.Static.Players.TryGetIdentity(ownerId);
             if (player == null)
@@ -141,12 +164,12 @@ namespace Sclean.Commands
         }
 
 
-        private int deleteGrids(CommandImp.GridData gridData, bool ignorePlayers)
+        private int deleteGrids(CommandImp.GridData gridData, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
         {
             var c = 0;
             foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
-                if (!gridGroupInfo.Protector.Selection(false, ignorePlayers))
+                if (!gridGroupInfo.Protector.Selection(selectPlayer, selectBeacon, selectPowered, selectNone))
                     continue;
 
                 foreach (var grid in gridGroupInfo.GridGroup)

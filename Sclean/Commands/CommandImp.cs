@@ -3,7 +3,6 @@ using Sandbox.Game.Entities;
 using Sandbox.Game.EntityComponents;
 using Sandbox.Game.World;
 using VRageMath;
-using static Sclean.Commands.CommandImp;
 
 namespace Sclean.Commands
 {
@@ -46,9 +45,6 @@ namespace Sclean.Commands
 
             foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
-                if (gridGroupInfo.Protector.ProtectionType != ProtectionTypeEnum.None)
-                    continue;
-
                 isProtectedGroup = false;
                 foreach (var grid in gridGroupInfo.GridGroup)
                 {
@@ -64,6 +60,9 @@ namespace Sclean.Commands
 
                     if (isProtectedGroup)
                         break;
+
+                    if (gridGroupInfo.Protector.ProtectionType == ProtectionTypeEnum.Powered)
+                        continue;
 
                     foreach (var playerInfo in gridData.PlayerInfos)
                     {
@@ -96,12 +95,18 @@ namespace Sclean.Commands
             public ProtectionTypeEnum ProtectionType = ProtectionTypeEnum.None;
 
 
-            public bool Selection(bool selectAll, bool ignorePlayers)
+            public bool Selection( bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
             {
-                if (selectAll)
+                if (selectPlayer && ProtectionType == ProtectionTypeEnum.Player)
                     return true;
 
-                if (ignorePlayers && ProtectionType == ProtectionTypeEnum.Player)
+                if (selectBeacon && ProtectionType == ProtectionTypeEnum.Beacon)
+                    return true;
+
+                if (selectPowered && ProtectionType == ProtectionTypeEnum.Powered)
+                    return true; 
+                
+                if (selectNone && ProtectionType == ProtectionTypeEnum.None)
                     return true;
 
                 return false;
@@ -117,10 +122,23 @@ namespace Sclean.Commands
             Powered
         }
 
-        public class GridGroupInfo
+        public class GridGroupInfo : IComparable<GridGroupInfo> 
         {
             public List<MyCubeGrid> GridGroup = new List<MyCubeGrid>();
             public ProtectorInfo Protector = new ProtectorInfo();
+
+            public int CompareTo(GridGroupInfo other)
+            {
+                string thisStr = SortString();
+                string otherStr = other.SortString();
+
+                return thisStr.CompareTo(otherStr);
+            }
+
+            public string SortString()
+            {
+                return Protector.OwnerName + ": " + Protector.Name;
+            }
         }
 
         public class GridData
@@ -278,7 +296,7 @@ namespace Sclean.Commands
                     {
                         ProtectionType = ProtectionTypeEnum.Beacon,
                         Position = block.PositionComp.GetPosition(),
-                        Name = block.Name,
+                        Name = grid.DisplayName,
                         OwnerName = GetOwnerName(ownerId)
                     });
                 }
