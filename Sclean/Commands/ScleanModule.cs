@@ -102,11 +102,11 @@ namespace Sclean.Commands
                 if (!gridGroupInfo.Protector.Selection(showAll, ignorePlayers))
                     continue;
 
-                g++;
-                sb.AppendLine("---");
+                ++g;
+                sb.AppendLine($"--- {gridGroupInfo.Protector.ProtectionType}");
                 foreach (var grid in gridGroupInfo.GridGroup)
                 {
-                    c++;
+                    ++c;
                     sb.AppendLine($"  {getGridOwner(grid)}: {grid.DisplayName} ({grid.BlocksCount} block(s))");
                 }
             }

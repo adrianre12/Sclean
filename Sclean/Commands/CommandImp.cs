@@ -24,12 +24,6 @@ namespace Sclean.Commands
  
             // Grid specific filtering is done in GetGridData
             GridData gridData = GetGridData();
-            GridData filteredGridData = new GridData
-            {
-                GridGroupInfos = new List<GridGroupInfo>(),
-                BeaconInfos = gridData.BeaconInfos,
-                PlayerInfos = new List<ProtectorInfo>()
-            };
 
             // get player positions
             foreach (var player in MySession.Static.Players.GetOnlinePlayers())
@@ -39,10 +33,10 @@ namespace Sclean.Commands
                     ProtectionType = ProtectionTypeEnum.Player,
                     Name = player.Identity.DisplayName,
                     OwnerId = player.Identity.IdentityId,
-                    Position = player.GetPosition()
+                    Position = player.GetPosition(),
                 };
                     
-                filteredGridData.PlayerInfos.Add(playerInfo);
+                gridData.PlayerInfos.Add(playerInfo);
             }
 
 
@@ -58,7 +52,7 @@ namespace Sclean.Commands
                 isProtectedGroup = false;
                 foreach (var grid in gridGroupInfo.GridGroup)
                 {
-                    foreach (var beaconInfo in filteredGridData.BeaconInfos)
+                    foreach (var beaconInfo in gridData.BeaconInfos)
                     {
                         if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), beaconInfo.Position) < beaconRangeSqr)
                         {
@@ -71,7 +65,7 @@ namespace Sclean.Commands
                     if (isProtectedGroup)
                         break;
 
-                    foreach (var playerInfo in filteredGridData.PlayerInfos)
+                    foreach (var playerInfo in gridData.PlayerInfos)
                     {
                         if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), playerInfo.Position) < playerRangeSqr)
                         {
@@ -91,7 +85,7 @@ namespace Sclean.Commands
                 }
             }
 
-            return filteredGridData;
+            return gridData;
         }
 
         public class ProtectorInfo
@@ -102,15 +96,15 @@ namespace Sclean.Commands
             public ProtectionTypeEnum ProtectionType = ProtectionTypeEnum.None;
 
 
-            public bool Selection(bool showAll, bool ignorePlayers)
+            public bool Selection(bool selectAll, bool ignorePlayers)
             {
-                if (showAll)
+                if (selectAll)
                     return true;
 
                 if (ignorePlayers && ProtectionType == ProtectionTypeEnum.Player)
-                    return false;
+                    return true;
 
-                return true;
+                return false;
             }
         }
 
@@ -165,7 +159,7 @@ namespace Sclean.Commands
             {
                 //Due to the locking do two stages, first does all the filtering and takes a long time. Second is a quick add to results.
                 long protectingOwnerId = 0;
-                bool isUnprotected = true;
+                bool isPowered = false;
                 foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
                     MyCubeGrid grid = node.NodeData;
@@ -183,7 +177,7 @@ namespace Sclean.Commands
                     // player grid and has power
                     if (gridInfo.Owner == OwnerType.Player && gridInfo.IsPowered)
                     {
-                        isUnprotected = false;
+                        isPowered = true;
                         protectingOwnerId = gridInfo.OwnerId;
                     }
                     //Log.Info($"Grid: {node.NodeData.DisplayName} use: {use} #Beacons: {gridInfo.BeaconPositions.Count} Owner: {gridInfo.Owner} IsPowered: {gridInfo.IsPowered}");
@@ -204,7 +198,7 @@ namespace Sclean.Commands
                     }
                 };
 
-                if (isUnprotected)
+                if (isPowered)
                 {
                     gridGroupInfo.Protector.ProtectionType = ProtectionTypeEnum.Powered;
                 }
@@ -220,7 +214,7 @@ namespace Sclean.Commands
             gridData.BeaconInfos =  beaconInfos;
 
             gridData.CountGrids(out int protectedGrids, out int unprotectedGrids);
-            Log.Info($"Unprotected GridGroups: {unprotectedGrids} Protected GridGroups: {protectedGrids}");
+            Log.Info($"GetGridData Unprotected GridGroups: {unprotectedGrids} Protected GridGroups: {protectedGrids}");
             return gridData;
         }
 
@@ -280,6 +274,7 @@ namespace Sclean.Commands
                     //Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId}");
                     gridInfo.BeaconInfos.Add(new ProtectorInfo
                     {
+                        ProtectionType = ProtectionTypeEnum.Beacon,
                         Position = block.PositionComp.GetPosition(),
                         Name = block.Name,
                         OwnerId = gridInfo.OwnerId
