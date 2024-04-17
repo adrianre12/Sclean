@@ -14,7 +14,7 @@ namespace Sclean.Commands
         /// Performs the distance filter on gridData
         /// </summary>
         /// <returns></returns>
-        public static GridData FilteredGridData(bool filter, bool ignorePlayers)
+        public static GridData FilteredGridData()
         {
             int playerRange = ScleanPlugin.Instance.Config.PlayerRange;
             int playerRangeSqr = playerRange * playerRange;
@@ -22,147 +22,220 @@ namespace Sclean.Commands
             int beaconRangeSqr = beaconRange * beaconRange;
  
             // Grid specific filtering is done in GetGridData
-            GridData gridData = GetGridData(filter);
-            GridData filteredGridData = new GridData
-            {
-                GridGroups = new List<List<MyCubeGrid>>(),
-                BeaconPositions = gridData.BeaconPositions,
-                PlayerPositions = new List<Vector3D>(),
-            };
+            GridData gridData = GetGridData();
 
             // get player positions
-            if (!ignorePlayers)
+            foreach (var player in MySession.Static.Players.GetOnlinePlayers())
             {
-                foreach (var player in MySession.Static.Players.GetOnlinePlayers())
+                ProtectorInfo playerInfo = new ProtectorInfo
                 {
-                    filteredGridData.PlayerPositions.Add(player.GetPosition());
-                }
+                    ProtectionType = ProtectionTypeEnum.Player,
+                    Name = player.Identity.DisplayName,
+                    OwnerName = player.Identity.DisplayName,
+                    Position = player.GetPosition(),
+                };
+                    
+                gridData.PlayerInfos.Add(playerInfo);
             }
+
 
             // filter by distance from player and beacon. Non player grids also have to be protected.
-            bool useGroup;
-            foreach (var gridGroup in gridData.GridGroups)
+            bool isProtectedGroup = false;
+            ProtectorInfo protector = new ProtectorInfo();
+
+            foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
-                useGroup = true;
-                foreach (var grid in gridGroup)
+                isProtectedGroup = false;
+                foreach (var grid in gridGroupInfo.GridGroup)
                 {
-                    foreach (var playerPosition in filteredGridData.PlayerPositions)
+                    foreach (var beaconInfo in gridData.BeaconInfos)
                     {
-                        if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), playerPosition) < playerRangeSqr)
+                        if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), beaconInfo.Position) < beaconRangeSqr)
                         {
-                            useGroup = false;
+                            isProtectedGroup = true;
+                            protector = beaconInfo;
                             break;
                         }
                     }
 
-                    if (!useGroup)
+                    if (isProtectedGroup)
                         break;
 
-                    foreach (var beaconPosition in filteredGridData.BeaconPositions)
+                    if (gridGroupInfo.Protector.ProtectionType == ProtectionTypeEnum.Powered)
+                        continue;
+
+                    foreach (var playerInfo in gridData.PlayerInfos)
                     {
-                        if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), beaconPosition) < beaconRangeSqr)
+                        if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), playerInfo.Position) < playerRangeSqr)
                         {
-                            useGroup = false;
+                            isProtectedGroup = true;
+                            protector = playerInfo;
                             break;
                         }
                     }
 
-                    if (!useGroup)
+                    if (isProtectedGroup)
                         break;
                 }
 
-                if (!filter || useGroup)
+                if (isProtectedGroup)
                 {
-                    filteredGridData.GridGroups.Add(gridGroup);
+                    gridGroupInfo.Protector = protector;
                 }
             }
 
-            return filteredGridData;
+            return gridData;
         }
 
-        public struct GridData
+        public class ProtectorInfo
         {
-            public List<List<MyCubeGrid>> GridGroups;
-            public List<Vector3D> BeaconPositions;
-            public List<Vector3D> PlayerPositions;
+            public Vector3D Position = Vector3D.Zero;
+            public string Name = "";
+            public string OwnerName = "";
+            public ProtectionTypeEnum ProtectionType = ProtectionTypeEnum.None;
 
-            public int CountGrids()
+
+            public bool Selection( bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
             {
-                int c = 0;
-                foreach (var grid in GridGroups)
+                if (selectPlayer && ProtectionType == ProtectionTypeEnum.Player)
+                    return true;
+
+                if (selectBeacon && ProtectionType == ProtectionTypeEnum.Beacon)
+                    return true;
+
+                if (selectPowered && ProtectionType == ProtectionTypeEnum.Powered)
+                    return true; 
+                
+                if (selectNone && ProtectionType == ProtectionTypeEnum.None)
+                    return true;
+
+                return false;
+            }
+        }
+
+
+        public enum ProtectionTypeEnum
+        {
+            None,
+            Beacon,
+            Player,
+            Powered
+        }
+
+        public class GridGroupInfo : IComparable<GridGroupInfo> 
+        {
+            public List<MyCubeGrid> GridGroup = new List<MyCubeGrid>();
+            public ProtectorInfo Protector = new ProtectorInfo();
+
+            public int CompareTo(GridGroupInfo other)
+            {
+                string thisStr = SortString();
+                string otherStr = other.SortString();
+
+                return thisStr.CompareTo(otherStr);
+            }
+
+            public string SortString()
+            {
+                return Protector.OwnerName + ": " + Protector.Name;
+            }
+        }
+
+        public class GridData
+        {
+            public List<GridGroupInfo> GridGroupInfos = new List<GridGroupInfo>();
+            public List<ProtectorInfo> BeaconInfos = new List<ProtectorInfo>();
+            public List<ProtectorInfo> PlayerInfos = new List<ProtectorInfo>();
+
+            public void CountGrids(out int protectedGrids, out int unprotectedGrids)
+            {
+                protectedGrids = 0;
+                unprotectedGrids = 0;
+                foreach (var gridGroupInfo in GridGroupInfos)
                 {
-                    c += grid.Count();
+                    if (gridGroupInfo.Protector.ProtectionType == ProtectionTypeEnum.None)
+                    {
+                        unprotectedGrids += gridGroupInfo.GridGroup.Count();
+                        continue;
+                    }
+                    protectedGrids += gridGroupInfo.GridGroup.Count();
                 }
-                return c;
             }
         }
 
         /// <summary>
-        /// Scan all the grids to find those elegable for removal by grid features (powered etc) and Scrap Beacon positions. If filter = false the list does not have inelegable grids removed.
+        /// Scan all the grids to find those elegable for removal by grid features (powered etc) and Scrap Beacon positions.
         /// </summary>
-        /// <param name="filter"></param>
         /// <returns></returns>
-        public static GridData GetGridData(bool filter)
+        public static GridData GetGridData()
         {
             var gridData = new GridData();
-            var gridGroups = new List<List<MyCubeGrid>>();
-            var beaconPositions = new List<Vector3D>();
+            var gridGroupInfos = new List<GridGroupInfo>();
+            var beaconInfos = new List<ProtectorInfo>();
 
             Parallel.ForEach(MyCubeGridGroups.Static.Logical.Groups, (group) =>
             {
                 //Due to the locking do two stages, first does all the filtering and takes a long time. Second is a quick add to results.
-                int c = 0;
-                bool use = true;
+                bool isPowered = false;
                 foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
                     MyCubeGrid grid = node.NodeData;
                     var gridInfo = GetGridInfo(grid);
 
-                    // has player beacon
-                    if (gridInfo.BeaconPositions.Count > 0 && gridInfo.Owner == OwnerType.Player)
+                    // has beacon
+                    if (gridInfo.BeaconInfos.Count > 0)
                     {
-                        lock (beaconPositions)
+                        lock (beaconInfos)
                         {
-                            beaconPositions.AddRange(gridInfo.BeaconPositions);
+                            beaconInfos.AddRange(gridInfo.BeaconInfos);
                         }
-                        use = false; // Not really needed as it would be filtered later by the beacon zone but it is an optimisation.
                     }
 
                     // player grid and has power
                     if (gridInfo.Owner == OwnerType.Player && gridInfo.IsPowered)
                     {
-                        use = false;
+                        isPowered = true;
                     }
                     //Log.Info($"Grid: {node.NodeData.DisplayName} use: {use} #Beacons: {gridInfo.BeaconPositions.Count} Owner: {gridInfo.Owner} IsPowered: {gridInfo.IsPowered}");
                 }
 
-                if (!filter || use)
+                List<MyCubeGrid> gridGroup = new List<MyCubeGrid>();
+                foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
-                    lock (gridGroups)
+                    gridGroup.Add(node.NodeData);
+                }
+                GridGroupInfo gridGroupInfo = new GridGroupInfo
+                {
+                    GridGroup = gridGroup,
+                    Protector = new ProtectorInfo
                     {
-                        List<MyCubeGrid> gridGroup = new List<MyCubeGrid>();
-                        foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
-                        {
-                            gridGroup.Add(node.NodeData);
-                            c++;
-                        }
-                        gridGroups.Add(gridGroup);
-                        //Log.Info($"GridGroups Added group size {gridGroup.Count}");
+                        ProtectionType = ProtectionTypeEnum.None,
                     }
+                };
+
+                if (isPowered)
+                {
+                    gridGroupInfo.Protector.ProtectionType = ProtectionTypeEnum.Powered;
                 }
 
+                lock (gridGroupInfos)
+                {
+                    gridGroupInfos.Add(gridGroupInfo);
+                    //Log.Info($"GridGroups Added group size {gridGroupInfo.GridGroups.Count}");
+                }
             });
 
-            gridData.GridGroups = gridGroups;
-            gridData.BeaconPositions = beaconPositions;
+            gridData.GridGroupInfos = gridGroupInfos;
+            gridData.BeaconInfos =  beaconInfos;
 
-            Log.Info($"GridGroups count {gridGroups.Count}");
+            gridData.CountGrids(out int protectedGrids, out int unprotectedGrids);
+            Log.Info($"GetGridData Unprotected GridGroups: {unprotectedGrids} Protected GridGroups: {protectedGrids}");
             return gridData;
         }
 
         private struct GridInfo
         {
-            public List<Vector3D> BeaconPositions;
+            public List<ProtectorInfo> BeaconInfos;
             public bool IsPowered;
             public OwnerType Owner;
         }
@@ -177,6 +250,12 @@ namespace Sclean.Commands
             Player
         }
 
+        private static string GetOwnerName(long ownerId) {
+            MyIdentity player = MySession.Static.Players.TryGetIdentity(ownerId);
+
+            return player == null ? "" : player.DisplayName;
+        }
+
         /// <summary>
         /// Consolodated scanning of a grid to retrieve the info in one pass
         /// </summary>
@@ -186,31 +265,12 @@ namespace Sclean.Commands
         {
             GridInfo gridInfo = new GridInfo
             {
-                BeaconPositions = new List<Vector3D>()
+                BeaconInfos = new List<ProtectorInfo>()
             };
 
             MyResourceSourceComponent? component;
-            long ownerId;
             string endsWith = ScleanPlugin.Instance.Config.BeaconSubtype;
-
-            foreach (var block in ((MyCubeGrid)grid).GetFatBlocks())
-            {
-                //Log.Info($"grid name>{grid.DisplayName} TypeId: {block.BlockDefinition.Id.TypeId.ToString()}");
-
-                if (block.BlockDefinition.Id.SubtypeId.ToString().EndsWith(endsWith))
-                {
-                    //Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId}");
-                    gridInfo.BeaconPositions.Add(block.PositionComp.GetPosition());
-                }
-
-                component = block.Components?.Get<MyResourceSourceComponent>();
-                if (component != null && component.ResourceTypes.Contains(MyResourceDistributorComponent.ElectricityId))
-                {
-                    if (component.HasCapacityRemainingByType(MyResourceDistributorComponent.ElectricityId) && component.ProductionEnabledByType(MyResourceDistributorComponent.ElectricityId))
-                        gridInfo.IsPowered = true;
-                }
-            }
-
+            long ownerId = 0;
             if (grid.BigOwners.Count > 0 && grid.BigOwners[0] != 0)
                 ownerId = grid.BigOwners[0];
             else if (grid.BigOwners.Count > 1)
@@ -224,6 +284,30 @@ namespace Sclean.Commands
                 gridInfo.Owner = OwnerType.NPC;
             else
                 gridInfo.Owner = OwnerType.Player;
+
+            foreach (var block in ((MyCubeGrid)grid).GetFatBlocks())
+            {
+                //Log.Info($"grid name>{grid.DisplayName} TypeId: {block.BlockDefinition.Id.TypeId.ToString()}");
+
+                if (block.BlockDefinition.Id.SubtypeId.ToString().EndsWith(endsWith))
+                {
+                    //Log.Info($"grid name>{grid.DisplayName} Found SubtypeId: {block.BlockDefinition.Id.SubtypeId}");
+                    gridInfo.BeaconInfos.Add(new ProtectorInfo
+                    {
+                        ProtectionType = ProtectionTypeEnum.Beacon,
+                        Position = block.PositionComp.GetPosition(),
+                        Name = grid.DisplayName,
+                        OwnerName = GetOwnerName(ownerId)
+                    });
+                }
+
+                component = block.Components?.Get<MyResourceSourceComponent>();
+                if (component != null && component.ResourceTypes.Contains(MyResourceDistributorComponent.ElectricityId))
+                {
+                    if (component.HasCapacityRemainingByType(MyResourceDistributorComponent.ElectricityId) && component.ProductionEnabledByType(MyResourceDistributorComponent.ElectricityId))
+                        gridInfo.IsPowered = true;
+                }
+            }
 
             return gridInfo;
         }
