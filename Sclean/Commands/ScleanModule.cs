@@ -100,7 +100,7 @@ namespace Sclean.Commands
             respondGridData(gridData, "List Protected", true, true, true, false);
         }
 
-        [Command("stats prot", "Stats of player's protected grid sizes'.")]
+        [Command("stats prot", "Stats of player's protected grid sizes'. Add say at the end to send to chat")]
         [Permission(MyPromoteLevel.Admin)]
         public void StatsProt(string opt1=null)
         {
@@ -115,7 +115,7 @@ namespace Sclean.Commands
             statsGridData(gridData, toChat, "Stats Protected",true,true,true,false);
         }
 
-        [Command("stats prot nop", "Stats of player's protected grid sizes' ignoring players.")]
+        [Command("stats prot nop", "Stats of player's protected grid sizes' ignoring players. Add say at the end to send to chat")]
         [Permission(MyPromoteLevel.Admin)]
         public void StatsProtNop(string opt1 = null)
         {
