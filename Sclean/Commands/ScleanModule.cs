@@ -8,6 +8,8 @@ using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using static Sclean.Commands.CommandImp;
+using System.Net.Sockets;
+using Torch.API.Managers;
 
 namespace Sclean.Commands
 {
@@ -98,6 +100,36 @@ namespace Sclean.Commands
             respondGridData(gridData, "List Protected", true, true, true, false);
         }
 
+        [Command("stats prot", "Stats of player's protected grid sizes'.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void StatsProt(string opt1=null)
+        {
+            Log.Info("stats command");
+            bool toChat = false;
+            if (opt1 != null && opt1.ToLower() == "say")
+            {
+                toChat = true;
+            }
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData();
+            statsGridData(gridData, toChat, "Stats Protected",true,true,true,false);
+        }
+
+        [Command("stats prot nop", "Stats of player's protected grid sizes' ignoring players.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void StatsProtNop(string opt1 = null)
+        {
+            Log.Info("stats command");
+            bool toChat = false;
+            if (opt1 != null && opt1.ToLower() == "say")
+            {
+                toChat = true;
+            }
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData();
+            statsGridData(gridData, toChat, "Stats Protected Ignore Players", false, true, true, false);
+        }
+
         private void respondGridData(CommandImp.GridData gridData, string title, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
         {
             Context.Respond(title);
@@ -140,7 +172,7 @@ namespace Sclean.Commands
             
             if (Context.SentBySelf)
             {
-                Context.Respond(sb.ToString());
+                Context.Respond(Environment.NewLine + sb.ToString());
             }
             else
             {
@@ -149,6 +181,124 @@ namespace Sclean.Commands
             }
         }
 
+        private class PlayerStat()
+        {
+            public string Name = "";
+            public string Prefix = "";
+            public int Bin1;
+            public int Bin2;
+            public int Bin5;
+            public int Bin10;
+            public int Bin20;
+            public int Bin50;
+            public int BinMax;
+
+            public void Update(int value)
+            {
+                switch (value)
+                {
+                    case <= 0:
+                        break;
+                    case <= 1:
+                        {
+                            ++Bin1;
+                            break;
+                        }
+                    case <= 2:
+                        {
+                            ++Bin2;
+                            break;
+                        }
+                    case <= 5:
+                        {
+                            ++Bin5;
+                            break;
+                        }
+                    case <= 10:
+                        {
+                            ++Bin10;
+                            break;
+                        }
+                    case <= 20:
+                        {
+                            ++Bin20;
+                            break;
+                        }
+                    case <= 50:
+                        {
+                            ++Bin50;
+                            break;
+                        }
+                    default:
+                        {
+                            ++BinMax;
+                            break;
+                        }
+                }
+            }
+            public override string ToString()
+            {
+                return $"{"",-6}{Bin1,7}{Bin2,7}{Bin5,7}{Bin10,7}{Bin20,7}{Bin50,7}{BinMax,7}";
+            }
+
+            public string Header()
+            {
+                return $"{Prefix,-6}{"Bin1",7}{"Bin2",7}{"Bin5",7}{"Bin10",7}{"Bin20",7}{"Bin50",7}{"BinMax",7}";
+            }
+        }
+
+        private void statsGridData(CommandImp.GridData gridData, bool toChat, string title, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
+        {
+            string playerName = "";
+            List<PlayerStat> stats = new List<PlayerStat>();
+            PlayerStat playerStat = new PlayerStat();
+
+            gridData.GridGroupInfos.Sort();
+
+            foreach (var gridGroupInfo in gridData.GridGroupInfos)
+            {
+                if (!gridGroupInfo.Protector.Selection(selectPlayer, selectBeacon, selectPowered, selectNone))
+                    continue;
+
+                playerName = gridGroupInfo.Protector.OwnerName;
+                if (!playerName.Equals(playerStat.Name))
+                {
+                    playerStat = new PlayerStat{
+                        Name = playerName, 
+                        Prefix = "Size"
+                    };
+                    stats.Add(playerStat);
+                }
+                foreach (var grid in gridGroupInfo.GridGroup)
+                {
+                    playerStat.Update(grid.BlocksCount);
+                }
+            }
+
+            StringBuilder sb = new StringBuilder();
+            Context.Respond(title);
+            foreach (var stat  in stats) {
+                sb.AppendLine(stat.Name);
+                sb.AppendLine(stat.Header());
+                sb.AppendLine(stat.ToString());
+                sb.AppendLine("");      
+            }
+
+            if (toChat)
+            {
+                Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>().SendMessageAsSelf(Environment.NewLine + sb.ToString());
+                return;
+            }
+
+            if (Context.SentBySelf)
+            {
+                Context.Respond(Environment.NewLine + sb.ToString());
+                return;
+            }
+
+            var m = new DialogMessage("Sclean", null, title, sb.ToString());
+            ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
+        }
         private string getGridOwner(MyCubeGrid grid)
         {
             long ownerId;
