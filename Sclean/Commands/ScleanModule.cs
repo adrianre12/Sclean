@@ -112,7 +112,7 @@ namespace Sclean.Commands
             }
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            statsGridData(gridData, toChat, "Stats Protected",true,true,true,false);
+            statsGridData(gridData, toChat, "Stats Protected Grids",true,true,true,false);
         }
 
         [Command("stats prot nop", "Stats of player's protected grid sizes' ignoring players. Add say at the end to send to chat")]
@@ -127,7 +127,7 @@ namespace Sclean.Commands
             }
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            statsGridData(gridData, toChat, "Stats Protected Ignore Players", false, true, true, false);
+            statsGridData(gridData, toChat, "Stats Protected Grids Ignoring Players", false, true, true, false);
         }
 
         private void respondGridData(CommandImp.GridData gridData, string title, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
@@ -192,6 +192,7 @@ namespace Sclean.Commands
             public int Bin20;
             public int Bin50;
             public int BinMax;
+            public int Total;
 
             public void Update(int value)
             {
@@ -235,6 +236,7 @@ namespace Sclean.Commands
                             break;
                         }
                 }
+                ++Total;
             }
             public override string ToString()
             {
@@ -277,16 +279,16 @@ namespace Sclean.Commands
 
             StringBuilder sb = new StringBuilder();
             Context.Respond(title);
-            foreach (var stat  in stats) {
-                sb.AppendLine(stat.Name);
-                sb.AppendLine(stat.Header());
-                sb.AppendLine(stat.ToString());
+            foreach (var stat in stats) {
+                sb.AppendLine($"### {stat.Name} Total: {stat.Total}");
+                sb.AppendLine($"``{stat.Header()}``");
+                sb.AppendLine($"``{stat.ToString()}``");
                 sb.AppendLine("");      
             }
 
             if (toChat)
             {
-                Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>().SendMessageAsSelf(Environment.NewLine + sb.ToString());
+                Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>().SendMessageAsSelf($"{Environment.NewLine}## {title}{Environment.NewLine}{sb.ToString()}");
                 return;
             }
 
@@ -299,6 +301,7 @@ namespace Sclean.Commands
             var m = new DialogMessage("Sclean", null, title, sb.ToString());
             ModCommunication.SendMessageTo(m, Context.Player.SteamUserId);
         }
+
         private string getGridOwner(MyCubeGrid grid)
         {
             long ownerId;
