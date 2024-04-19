@@ -278,24 +278,41 @@ namespace Sclean.Commands
             }
 
             StringBuilder sb = new StringBuilder();
-            Context.Respond(title);
-            foreach (var stat in stats) {
-                sb.AppendLine($"### {stat.Name} Total: {stat.Total}");
-                sb.AppendLine($"``{stat.Header()}``");
-                sb.AppendLine($"``{stat.ToString()}``");
-                sb.AppendLine("");      
-            }
-
             if (toChat)
             {
+                foreach (var stat in stats)
+                {
+                    sb.AppendLine($"### {stat.Name} Total: {stat.Total}");
+                    sb.AppendLine($"``{stat.Header()}``");
+                    sb.AppendLine($"``{stat.ToString()}``");
+                    sb.AppendLine("");
+                }
                 Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>().SendMessageAsSelf($"{Environment.NewLine}## {title}{Environment.NewLine}{sb.ToString()}");
                 return;
             }
 
+            Context.Respond(title);
+
             if (Context.SentBySelf)
             {
-                Context.Respond(Environment.NewLine + sb.ToString());
+                sb.AppendLine("");
+                foreach (var stat in stats)
+                {
+                    sb.AppendLine($"{stat.Name} Total: {stat.Total}");
+                    sb.AppendLine(stat.Header());
+                    sb.AppendLine(stat.ToString());
+                    sb.AppendLine("");
+                }
+                Context.Respond(sb.ToString());
                 return;
+            }
+
+            foreach (var stat in stats)
+            {
+                sb.AppendLine($"{stat.Name} Total: {stat.Total}");
+                sb.AppendLine(stat.Header());
+                sb.AppendLine(stat.ToString());
+                sb.AppendLine("");
             }
 
             var m = new DialogMessage("Sclean", null, title, sb.ToString());
