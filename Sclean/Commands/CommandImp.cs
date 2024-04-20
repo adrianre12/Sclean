@@ -2,6 +2,7 @@
 using Sandbox.Game.Entities;
 using Sandbox.Game.EntityComponents;
 using Sandbox.Game.World;
+using System.Windows.Controls;
 using VRageMath;
 
 namespace Sclean.Commands
@@ -32,6 +33,7 @@ namespace Sclean.Commands
                     ProtectionType = ProtectionTypeEnum.Player,
                     Name = player.Identity.DisplayName,
                     OwnerName = player.Identity.DisplayName,
+                    OwnerId =  player.Identity.IdentityId,
                     Position = player.GetPosition(),
                 };
                     
@@ -42,19 +44,32 @@ namespace Sclean.Commands
             // filter by distance from player and beacon. Non player grids also have to be protected.
             bool isProtectedGroup = false;
             ProtectorInfo protector = new ProtectorInfo();
+            double gridDistanceSqr = 0;
+            double minDistanceSqr;
 
             foreach (var gridGroupInfo in gridData.GridGroupInfos)
             {
                 isProtectedGroup = false;
                 foreach (var grid in gridGroupInfo.GridGroup)
                 {
+                    minDistanceSqr = double.MaxValue;
                     foreach (var beaconInfo in gridData.BeaconInfos)
                     {
-                        if (Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), beaconInfo.Position) < beaconRangeSqr)
+                        gridDistanceSqr = Vector3D.DistanceSquared(grid.PositionComp.GetPosition(), beaconInfo.Position);
+                        if (gridDistanceSqr < beaconRangeSqr)
                         {
                             isProtectedGroup = true;
-                            protector = beaconInfo;
-                            break;
+
+                            if (FindOwner(grid.BigOwners) == beaconInfo.OwnerId) // grid and beacon owner match give up
+                            {
+                                protector = beaconInfo;
+                                break;
+                            }
+
+                            if(gridDistanceSqr < minDistanceSqr) { // find the closest beacon
+                                protector = beaconInfo;
+                                minDistanceSqr = gridDistanceSqr;
+                            }
                         }
                     }
 
@@ -92,6 +107,7 @@ namespace Sclean.Commands
             public Vector3D Position = Vector3D.Zero;
             public string Name = "";
             public string OwnerName = "";
+            public long OwnerId = 0;
             public ProtectionTypeEnum ProtectionType = ProtectionTypeEnum.None;
 
 
@@ -177,6 +193,7 @@ namespace Sclean.Commands
             {
                 //Due to the locking do two stages, first does all the filtering and takes a long time. Second is a quick add to results.
                 bool isPowered = false;
+                long powerOwnerId = 0;
                 foreach (var node in group.Nodes.Where(x => x.NodeData.Projector == null))
                 {
                     MyCubeGrid grid = node.NodeData;
@@ -195,6 +212,7 @@ namespace Sclean.Commands
                     if (gridInfo.Owner == OwnerType.Player && gridInfo.IsPowered)
                     {
                         isPowered = true;
+                        powerOwnerId = gridInfo.OwnerId;
                     }
                     //Log.Info($"Grid: {node.NodeData.DisplayName} use: {use} #Beacons: {gridInfo.BeaconPositions.Count} Owner: {gridInfo.Owner} IsPowered: {gridInfo.IsPowered}");
                 }
@@ -216,6 +234,7 @@ namespace Sclean.Commands
                 if (isPowered)
                 {
                     gridGroupInfo.Protector.ProtectionType = ProtectionTypeEnum.Powered;
+                    gridGroupInfo.Protector.OwnerId = powerOwnerId;
                 }
 
                 lock (gridGroupInfos)
@@ -238,6 +257,7 @@ namespace Sclean.Commands
             public List<ProtectorInfo> BeaconInfos;
             public bool IsPowered;
             public OwnerType Owner;
+            public long OwnerId;
         }
 
         /// <summary>
@@ -256,6 +276,17 @@ namespace Sclean.Commands
             return player == null ? "" : player.DisplayName;
         }
 
+        private static long FindOwner(List<long> bigOwners)
+        {
+            if (bigOwners.Count > 1)
+                return bigOwners[0] != 0 ? bigOwners[0] : bigOwners[1];
+
+            if (bigOwners.Count > 0)
+                return bigOwners[0];
+
+            return 0;
+        }
+
         /// <summary>
         /// Consolodated scanning of a grid to retrieve the info in one pass
         /// </summary>
@@ -270,17 +301,11 @@ namespace Sclean.Commands
 
             MyResourceSourceComponent? component;
             string endsWith = ScleanPlugin.Instance.Config.BeaconSubtype;
-            long ownerId = 0;
-            if (grid.BigOwners.Count > 0 && grid.BigOwners[0] != 0)
-                ownerId = grid.BigOwners[0];
-            else if (grid.BigOwners.Count > 1)
-                ownerId = grid.BigOwners[1];
-            else
-                ownerId = 0L;
+            gridInfo.OwnerId = FindOwner(grid.BigOwners);
 
-            if (ownerId == 0L)
+            if (gridInfo.OwnerId == 0L)
                 gridInfo.Owner = OwnerType.Nobody;
-            else if (MySession.Static.Players.IdentityIsNpc(ownerId))
+            else if (MySession.Static.Players.IdentityIsNpc(gridInfo.OwnerId))
                 gridInfo.Owner = OwnerType.NPC;
             else
                 gridInfo.Owner = OwnerType.Player;
@@ -297,7 +322,8 @@ namespace Sclean.Commands
                         ProtectionType = ProtectionTypeEnum.Beacon,
                         Position = block.PositionComp.GetPosition(),
                         Name = grid.DisplayName,
-                        OwnerName = GetOwnerName(ownerId)
+                        OwnerId = gridInfo.OwnerId,
+                        OwnerName = GetOwnerName(gridInfo.OwnerId)
                     });
                 }
 
