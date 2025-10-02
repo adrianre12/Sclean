@@ -34,4 +34,8 @@
         </None>
     </ItemGroup>
 
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+      <Exec Command="TorchPluginDeploy.cmd" />
+    </Target>
+
 </Project>
