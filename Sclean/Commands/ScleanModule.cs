@@ -1,15 +1,13 @@
-﻿using System.Text;
-using Torch.Commands;
-using Torch.Commands.Permissions;
-using Torch.Mod.Messages;
-using Torch.Mod;
-using VRage.Game.ModAPI;
-using NLog;
+﻿using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
-using static Sclean.Commands.CommandImp;
-using System.Net.Sockets;
+using System.Text;
 using Torch.API.Managers;
+using Torch.Commands;
+using Torch.Commands.Permissions;
+using Torch.Mod;
+using Torch.Mod.Messages;
+using VRage.Game.ModAPI;
 
 namespace Sclean.Commands
 {
@@ -46,17 +44,31 @@ namespace Sclean.Commands
 
         }
 
-        [Command("delete nop", "Delete grids using the ScrapYard rules but ignoring players")]
+        [Command("delete nop", "Delete grids using the ScrapYard rules but ignoring players.")]
         [Permission(MyPromoteLevel.Admin)]
         public void DeleteNop()
         {
-            Log.Info("delete command");
+            Log.Info("delete nop command");
             CommandImp.GridData gridData = CommandImp.FilteredGridData();
 
             var c = deleteGrids(gridData, true, false, false, true);
 
-            Context.Respond($"Deleted {c} grids matching the Scrapyard rules.");
-            Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules.");
+            Context.Respond($"Deleted {c} grids matching the Scrapyard rules, but ignoring players.");
+            Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules, but ignoring players.");
+
+        }
+
+        [Command("delete nopwr", "Delete grids using the ScrapYard rules, including player's powered grids.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void DeleteNopwr()
+        {
+            Log.Info("delete nopwr command");
+            CommandImp.GridData gridData = CommandImp.FilteredGridData();
+
+            var c = deleteGrids(gridData, false, false, true, true);
+
+            Context.Respond($"Deleted {c} grids matching the Scrapyard rules, including player's powered grids.");
+            Log.Info($"Sclean deleted {c} grids matching the Scrapyard rules, including player's powered grids.");
 
         }
 
@@ -77,7 +89,18 @@ namespace Sclean.Commands
             Log.Info("list nop command");
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            respondGridData(gridData,"List Deletable Ignoring Players", true, false, false, true);
+            respondGridData(gridData, "List Deletable Ignoring Players", true, false, false, true);
+        }
+
+
+        [Command("list nopwr", "List potental removals including player's powered grids.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ListNopwr()
+        {
+            Log.Info("list nopwr command");
+            CommandImp.GridData gridData;
+            gridData = CommandImp.FilteredGridData();
+            respondGridData(gridData, "List Deletable Including Powered Grids", false, false, true, true);
         }
 
         [Command("list all", "List all grids considered")]
@@ -102,7 +125,7 @@ namespace Sclean.Commands
 
         [Command("stats prot", "Stats of player's protected grid sizes'. Add say at the end to send to chat")]
         [Permission(MyPromoteLevel.Admin)]
-        public void StatsProt(string opt1=null)
+        public void StatsProt(string opt1 = null)
         {
             Log.Info("stats command");
             bool toChat = false;
@@ -112,7 +135,7 @@ namespace Sclean.Commands
             }
             CommandImp.GridData gridData;
             gridData = CommandImp.FilteredGridData();
-            statsGridData(gridData, toChat, "Stats Protected Grids",true,true,true,false);
+            statsGridData(gridData, toChat, "Stats Protected Grids", true, true, true, false);
         }
 
         [Command("stats prot nop", "Stats of player's protected grid sizes' ignoring players. Add say at the end to send to chat")]
@@ -133,7 +156,7 @@ namespace Sclean.Commands
         private void respondGridData(CommandImp.GridData gridData, string title, bool selectPlayer, bool selectBeacon, bool selectPowered, bool selectNone)
         {
             Context.Respond(title);
-            
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"Active Safe Zones: Player={gridData.PlayerInfos.Count} Beacon={gridData.BeaconInfos.Count}");
             int c = 0;
@@ -153,7 +176,8 @@ namespace Sclean.Commands
                 if (sectionTitle.Equals(newSectionTitle))
                 {
                     sb.AppendLine($"---");
-                } else
+                }
+                else
                 {
                     sectionTitle = newSectionTitle;
                     sb.AppendLine("");
@@ -169,7 +193,7 @@ namespace Sclean.Commands
 
             sb.AppendLine("");
             sb.AppendLine($"Found {g} groups, total {c} matching the Scrapyard rules");
-            
+
             if (Context.SentBySelf)
             {
                 Context.Respond(Environment.NewLine + sb.ToString());
@@ -265,8 +289,9 @@ namespace Sclean.Commands
                 playerName = gridGroupInfo.Protector.OwnerName;
                 if (!playerName.Equals(playerStat.Name))
                 {
-                    playerStat = new PlayerStat{
-                        Name = playerName, 
+                    playerStat = new PlayerStat
+                    {
+                        Name = playerName,
                         Prefix = "Size"
                     };
                     stats.Add(playerStat);
